@@ -1,12 +1,19 @@
 use bevy::prelude::*;
+use objc2::msg_send;
+use objc2::runtime::{AnyClass, AnyObject};
+use objc2::{declare_class, msg_send_id, mutability, sel, ClassType, DeclaredClass};
+use objc2_foundation::{NSObject, NSString};
 use std::fs;
 use std::path::PathBuf;
+use std::sync::atomic::{AtomicI32, Ordering};
 
 const SETTINGS_FILE: &str = "settings.json";
 const DEFAULT_STAGE_DISTANCE: f32 = 6.0;
 const DISTANCE_STEP: f32 = 0.5;
 const MIN_DISTANCE: f32 = 1.0;
 const MAX_DISTANCE: f32 = 30.0;
+
+static DISTANCE_STEPS: AtomicI32 = AtomicI32::new(0);
 
 #[derive(Resource, Clone)]
 pub struct AppSettings {
@@ -21,14 +28,46 @@ impl Default for AppSettings {
     }
 }
 
-#[derive(Component)]
-struct SettingsUiRoot;
+declare_class!(
+    struct MenuHandler;
 
-#[derive(Component)]
-struct DistanceLabel;
+    unsafe impl ClassType for MenuHandler {
+        type Super = NSObject;
+        type Mutability = mutability::InteriorMutable;
+        const NAME: &'static str = "OSMenuHandler";
+    }
 
-#[derive(Resource, Default)]
-struct SettingsUiOpen(bool);
+    impl DeclaredClass for MenuHandler {
+        type Ivars = ();
+    }
+
+    unsafe impl MenuHandler {
+        #[method(increaseDistance:)]
+        fn _increase_distance(&self, _sender: &AnyObject) {
+            DISTANCE_STEPS.fetch_add(1, Ordering::Relaxed);
+        }
+
+        #[method(decreaseDistance:)]
+        fn _decrease_distance(&self, _sender: &AnyObject) {
+            DISTANCE_STEPS.fetch_add(-1, Ordering::Relaxed);
+        }
+    }
+);
+
+impl MenuHandler {
+    fn new() -> objc2::rc::Id<Self> {
+        let this = Self::alloc().set_ivars(());
+        unsafe { msg_send_id![super(this), init] }
+    }
+}
+
+#[derive(Resource)]
+struct NativeMenuHandler(#[allow(dead_code)] objc2::rc::Id<MenuHandler>);
+
+// SAFETY: MenuHandler only modifies a global AtomicI32 and is stored
+// solely to prevent deallocation. It is never accessed from Bevy threads.
+unsafe impl Send for NativeMenuHandler {}
+unsafe impl Sync for NativeMenuHandler {}
 
 pub struct SettingsPlugin;
 
@@ -36,16 +75,8 @@ impl Plugin for SettingsPlugin {
     fn build(&self, app: &mut App) {
         let settings = load_settings();
         app.insert_resource(settings)
-            .init_resource::<SettingsUiOpen>()
-            .add_systems(Startup, spawn_settings_ui)
-            .add_systems(
-                Update,
-                (
-                    toggle_settings_ui,
-                    handle_settings_input,
-                    update_distance_label,
-                ),
-            );
+            .add_systems(Startup, setup_menu_bar)
+            .add_systems(Update, poll_menu_distance);
     }
 }
 
@@ -76,106 +107,77 @@ fn save_settings(settings: &AppSettings) {
     }
 }
 
-fn spawn_settings_ui(mut commands: Commands, settings: Res<AppSettings>) {
-    commands
-        .spawn((
-            Node {
-                position_type: PositionType::Absolute,
-                top: Val::Px(20.0),
-                right: Val::Px(20.0),
-                flex_direction: FlexDirection::Column,
-                padding: UiRect::all(Val::Px(16.0)),
-                row_gap: Val::Px(8.0),
-                ..default()
-            },
-            BackgroundColor(Color::srgba(0.1, 0.1, 0.1, 0.85)),
-            Visibility::Hidden,
-            SettingsUiRoot,
-        ))
-        .with_children(|parent| {
-            parent.spawn((
-                Text::new("Settings"),
-                TextFont {
-                    font_size: 22.0,
-                    ..default()
-                },
-                TextColor(Color::WHITE),
-            ));
+fn setup_menu_bar(mut commands: Commands) {
+    let handler = MenuHandler::new();
 
-            parent.spawn((
-                Text::new(format!("Distance to stage: {:.1}", settings.stage_distance)),
-                TextFont {
-                    font_size: 16.0,
-                    ..default()
-                },
-                TextColor(Color::srgba(0.9, 0.9, 0.9, 1.0)),
-                DistanceLabel,
-            ));
-
-            parent.spawn((
-                Text::new("[Up/Down] adjust | [Tab] close"),
-                TextFont {
-                    font_size: 13.0,
-                    ..default()
-                },
-                TextColor(Color::srgba(0.6, 0.6, 0.6, 1.0)),
-            ));
-        });
-}
-
-fn toggle_settings_ui(
-    keyboard: Res<ButtonInput<KeyCode>>,
-    mut ui_open: ResMut<SettingsUiOpen>,
-    mut query: Query<&mut Visibility, With<SettingsUiRoot>>,
-) {
-    if keyboard.just_pressed(KeyCode::Tab) {
-        ui_open.0 = !ui_open.0;
-        for mut vis in &mut query {
-            *vis = if ui_open.0 {
-                Visibility::Visible
-            } else {
-                Visibility::Hidden
-            };
+    unsafe {
+        let app: *const AnyObject =
+            msg_send![AnyClass::get("NSApplication").unwrap(), sharedApplication];
+        let main_menu: *const AnyObject = msg_send![app, mainMenu];
+        if main_menu.is_null() {
+            warn!("No main menu found");
+            return;
         }
+
+        // Create "Distance" submenu
+        let menu_title = NSString::from_str("Distance");
+        let distance_menu: *const AnyObject = msg_send![AnyClass::get("NSMenu").unwrap(), alloc];
+        let distance_menu: *const AnyObject = msg_send![distance_menu, initWithTitle: &*menu_title];
+
+        // "Increase Distance" menu item
+        let inc_title = NSString::from_str("Increase Distance");
+        let inc_key = NSString::from_str("=");
+        let increase_item: *const AnyObject =
+            msg_send![AnyClass::get("NSMenuItem").unwrap(), alloc];
+        let increase_item: *const AnyObject = msg_send![
+            increase_item,
+            initWithTitle: &*inc_title,
+            action: sel!(increaseDistance:),
+            keyEquivalent: &*inc_key
+        ];
+        let handler_ptr: *const MenuHandler = &*handler;
+        let _: () = msg_send![increase_item, setTarget: handler_ptr];
+        let _: () = msg_send![distance_menu, addItem: increase_item];
+
+        // "Decrease Distance" menu item
+        let dec_title = NSString::from_str("Decrease Distance");
+        let dec_key = NSString::from_str("-");
+        let decrease_item: *const AnyObject =
+            msg_send![AnyClass::get("NSMenuItem").unwrap(), alloc];
+        let decrease_item: *const AnyObject = msg_send![
+            decrease_item,
+            initWithTitle: &*dec_title,
+            action: sel!(decreaseDistance:),
+            keyEquivalent: &*dec_key
+        ];
+        let _: () = msg_send![decrease_item, setTarget: handler_ptr];
+        let _: () = msg_send![distance_menu, addItem: decrease_item];
+
+        // Create top-level menu bar item and attach submenu
+        let item_title = NSString::from_str("Distance");
+        let menu_item: *const AnyObject = msg_send![AnyClass::get("NSMenuItem").unwrap(), new];
+        let _: () = msg_send![menu_item, setTitle: &*item_title];
+        let _: () = msg_send![menu_item, setSubmenu: distance_menu];
+        let _: () = msg_send![main_menu, addItem: menu_item];
     }
+
+    commands.insert_resource(NativeMenuHandler(handler));
 }
 
-fn handle_settings_input(
-    keyboard: Res<ButtonInput<KeyCode>>,
-    ui_open: Res<SettingsUiOpen>,
+fn poll_menu_distance(
     mut settings: ResMut<AppSettings>,
     mut screen_transforms: Query<&mut Transform, With<crate::stage::ScreenMarker>>,
 ) {
-    if !ui_open.0 {
+    let steps = DISTANCE_STEPS.swap(0, Ordering::Relaxed);
+    if steps == 0 {
         return;
     }
 
-    let mut changed = false;
+    let delta = steps as f32 * DISTANCE_STEP;
+    settings.stage_distance = (settings.stage_distance + delta).clamp(MIN_DISTANCE, MAX_DISTANCE);
 
-    if keyboard.just_pressed(KeyCode::ArrowUp) {
-        settings.stage_distance = (settings.stage_distance + DISTANCE_STEP).min(MAX_DISTANCE);
-        changed = true;
+    for mut transform in &mut screen_transforms {
+        transform.translation.z = -settings.stage_distance;
     }
-    if keyboard.just_pressed(KeyCode::ArrowDown) {
-        settings.stage_distance = (settings.stage_distance - DISTANCE_STEP).max(MIN_DISTANCE);
-        changed = true;
-    }
-
-    if changed {
-        for mut transform in &mut screen_transforms {
-            transform.translation.z = -settings.stage_distance;
-        }
-        save_settings(&settings);
-    }
-}
-
-fn update_distance_label(
-    settings: Res<AppSettings>,
-    mut query: Query<&mut Text, With<DistanceLabel>>,
-) {
-    if settings.is_changed() {
-        for mut text in &mut query {
-            **text = format!("Distance to stage: {:.1}", settings.stage_distance);
-        }
-    }
+    save_settings(&settings);
 }
