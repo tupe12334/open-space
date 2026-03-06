@@ -1661,9 +1661,9 @@ dependencies = [
 
 [[package]]
 name = "core-foundation"
-version = "0.10.0"
+version = "0.10.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b55271e5c8c478ad3f38ad24ef34923091e0548492a266d19b3c0b4d82574c63"
+checksum = "b2a6cd9ae233e7f62ba4e9353e81a88df7fc8a5987b8d445b4d90c879bd156f6"
 dependencies = [
  "core-foundation-sys",
  "libc",
@@ -1708,7 +1708,7 @@ dependencies = [
  "bitflags 2.6.0",
  "block",
  "cfg-if",
- "core-foundation 0.10.0",
+ "core-foundation 0.10.1",
  "libc",
  "objc2",
 ]
@@ -1722,7 +1722,7 @@ dependencies = [
  "bitflags 2.6.0",
  "block",
  "cfg-if",
- "core-foundation 0.10.0",
+ "core-foundation 0.10.1",
  "libc",
  "objc2",
 ]
@@ -1736,7 +1736,7 @@ dependencies = [
  "block",
  "cfg-if",
  "core-audio-types",
- "core-foundation 0.10.0",
+ "core-foundation 0.10.1",
  "core-graphics2 0.4.1",
  "core-video",
  "libc",
@@ -1750,7 +1750,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d45e71d5be22206bed53c3c3cb99315fc4c3d31b8963808c6bc4538168c4f8ef"
 dependencies = [
  "block",
- "core-foundation 0.10.0",
+ "core-foundation 0.10.1",
  "core-graphics2 0.4.1",
  "io-surface",
  "libc",
@@ -2262,7 +2262,7 @@ version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "495af945e45efd6386227613cd9fb7bd7c43d3c095040e30c5304c489e6abed5"
 dependencies = [
- "core-foundation 0.10.0",
+ "core-foundation 0.10.1",
  "inotify",
  "io-kit-sys",
  "js-sys",
@@ -2660,7 +2660,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8283575d5f0b2e7447ec0840363879d71c0fa325d4c699d5b45208ea4a51f45e"
 dependencies = [
  "cgl",
- "core-foundation 0.10.0",
+ "core-foundation 0.10.1",
  "core-foundation-sys",
  "leaky-cow",
  "libc",
@@ -3536,7 +3536,7 @@ dependencies = [
  "ar-drivers",
  "bevy",
  "cargo-husky",
- "core-foundation 0.10.0",
+ "core-foundation 0.10.1",
  "core-graphics2 0.5.2",
  "core-media",
  "core-video",
@@ -4083,7 +4083,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e3da365034668811518d19b330f2b35f8517f948fe01ef48726688c0536d1d0e"
 dependencies = [
  "block2",
- "core-foundation 0.10.0",
+ "core-foundation 0.10.1",
  "core-graphics2 0.4.1",
  "core-media",
  "dispatch2",
@@ -4151,22 +4151,21 @@ dependencies = [
 
 [[package]]
 name = "serialport"
-version = "4.8.1"
+version = "4.7.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "21f60a586160667241d7702c420fc223939fb3c0bb8d3fac84f78768e8970dee"
+checksum = "2acaf3f973e8616d7ceac415f53fc60e190b2a686fbcf8d27d0256c741c5007b"
 dependencies = [
  "bitflags 2.6.0",
  "cfg-if",
- "core-foundation 0.10.0",
+ "core-foundation 0.10.1",
  "core-foundation-sys",
  "io-kit-sys",
  "libudev",
  "mach2",
  "nix 0.26.4",
- "quote",
  "scopeguard",
  "unescaper",
- "windows-sys 0.52.0",
+ "winapi",
 ]
 
 [[package]]
