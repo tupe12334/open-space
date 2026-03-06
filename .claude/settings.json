@@ -12,7 +12,9 @@
       "Bash(npm search:*)",
       "Bash(command:*)",
       "Bash(git status:*)",
-      "Bash(pnpm dlx:*)"
+      "Bash(pnpm dlx:*)",
+      "Bash(cargo outdated:*)",
+      "Bash(cargo search:*)"
     ]
   },
   "hooks": {
