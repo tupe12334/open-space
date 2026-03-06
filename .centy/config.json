@@ -4,5 +4,7 @@
   "hooks": [],
   "priorityColors": {},
   "priorityLevels": 3,
-  "stateColors": {}
+  "stateColors": {},
+  "version": "0.8.1",
+  "workspace.updateStatusOnOpen": true
 }
