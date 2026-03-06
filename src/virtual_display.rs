@@ -70,14 +70,23 @@ pub struct VirtualDisplayPlugin;
 
 impl Plugin for VirtualDisplayPlugin {
     fn build(&self, app: &mut App) {
-        let num_screens = app
-            .world()
-            .get_resource::<crate::settings::AppSettings>()
-            .map(|s| s.num_screens as usize)
-            .unwrap_or(6);
-        let displays = create_virtual_displays(num_screens, 1920, 1080, 60.0);
-        app.insert_resource(displays);
+        // Insert an empty resource so Res<VirtualDisplays> is always valid.
+        // The actual displays are created in PreStartup, after the first
+        // create_monitors() call has already run (seeing only physical displays).
+        app.insert_resource(VirtualDisplays {
+            _displays: Vec::new(),
+        });
+        app.add_systems(PreStartup, setup_virtual_displays);
     }
+}
+
+fn setup_virtual_displays(
+    mut vdisplays: ResMut<VirtualDisplays>,
+    settings: Res<crate::settings::AppSettings>,
+) {
+    let num_screens = settings.num_screens as usize;
+    let created = create_virtual_displays(num_screens, 1920, 1080, 60.0);
+    *vdisplays = created;
 }
 
 /// Alloc+init an ObjC object, returning a retained raw pointer.
@@ -166,12 +175,25 @@ fn create_virtual_displays(
 
             // Apply settings
             let result: bool = msg_send![display, applySettings: settings];
-            info!("Apply settings result: {}", result);
+            info!(
+                "Apply settings result for display {}: {}",
+                display_id, result
+            );
 
             // Release temporaries (descriptor, settings, mode are not needed after this)
             ffi::objc_release(descriptor as *mut _);
             ffi::objc_release(settings as *mut _);
             // mode is autoreleased via arrayWithObject, don't double-release
+
+            if !result {
+                warn!(
+                    "applySettings failed for virtual display {} (ID {}), releasing it",
+                    i + 1,
+                    display_id
+                );
+                ffi::objc_release(display as *mut _);
+                continue;
+            }
 
             // Keep display alive (we own the +1 from alloc/init)
             displays.push(VirtualDisplay {
@@ -238,6 +260,37 @@ fn create_virtual_displays(
             modeless
         );
         displays.retain(|d| !modeless.contains(&d.display_id));
+
+        // Wait until destroyed displays are no longer in CGGetActiveDisplayList.
+        // This closes the race window where create_monitors() could still see them.
+        let destroy_timeout = std::time::Duration::from_secs(5);
+        let destroy_start = std::time::Instant::now();
+        loop {
+            let active_ids: std::collections::HashSet<u32> = crate::stage::get_active_displays(32)
+                .iter()
+                .map(|(id, _)| *id)
+                .collect();
+            let still_active: Vec<u32> = modeless
+                .iter()
+                .filter(|id| active_ids.contains(id))
+                .copied()
+                .collect();
+            if still_active.is_empty() {
+                info!(
+                    "Destroyed displays removed from active list after {:.0?}",
+                    destroy_start.elapsed()
+                );
+                break;
+            }
+            if destroy_start.elapsed() > destroy_timeout {
+                warn!(
+                    "Timed out waiting for destroyed displays to leave active list: {:?}",
+                    still_active
+                );
+                break;
+            }
+            std::thread::sleep(std::time::Duration::from_millis(50));
+        }
     }
 
     info!(
