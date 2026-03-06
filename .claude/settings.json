@@ -14,7 +14,9 @@
       "Bash(git status:*)",
       "Bash(pnpm dlx:*)",
       "Bash(cargo outdated:*)",
-      "Bash(cargo search:*)"
+      "Bash(cargo search:*)",
+      "Bash(npx centy:*)",
+      "Bash(cargo check:*)"
     ]
   },
   "hooks": {
