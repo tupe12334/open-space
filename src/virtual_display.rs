@@ -189,6 +189,13 @@ fn create_virtual_displays(
         displays.iter().map(|d| d.display_id).collect::<Vec<_>>()
     );
 
+    // Give macOS time to fully register the virtual display modes.
+    // Without this, CGDisplayCopyAllDisplayModes may return NULL for these
+    // displays, causing winit to panic when enumerating monitors.
+    if !displays.is_empty() {
+        std::thread::sleep(std::time::Duration::from_millis(500));
+    }
+
     VirtualDisplays {
         _displays: displays,
     }
