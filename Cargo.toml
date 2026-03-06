@@ -25,7 +25,7 @@ objc2-foundation = { version = "0.2.2", features = [
   "NSGeometry",
   "NSString",
 ] }
-dispatch2 = "0.1.0"
+dispatch2 = "0.3.1"
 core-foundation = { version = "0.10.0", default-features = false }
 rand = "0.8.5"
 libc = "0.2.161"
