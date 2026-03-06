@@ -5,7 +5,7 @@ use objc2::{declare_class, msg_send_id, mutability, sel, ClassType, DeclaredClas
 use objc2_foundation::{NSObject, NSString};
 use std::fs;
 use std::path::PathBuf;
-use std::sync::atomic::{AtomicI32, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicI32, Ordering};
 
 const SETTINGS_FILE: &str = "settings.json";
 const DEFAULT_STAGE_DISTANCE: f32 = 6.0;
@@ -18,6 +18,7 @@ const MAX_NUM_SCREENS: u32 = 6;
 
 static DISTANCE_STEPS: AtomicI32 = AtomicI32::new(0);
 static SCREEN_STEPS: AtomicI32 = AtomicI32::new(0);
+pub static CENTER_STAGE: AtomicBool = AtomicBool::new(false);
 
 #[derive(Resource, Clone)]
 pub struct AppSettings {
@@ -66,6 +67,11 @@ declare_class!(
         #[method(decreaseScreens:)]
         fn _decrease_screens(&self, _sender: &AnyObject) {
             SCREEN_STEPS.fetch_add(-1, Ordering::Relaxed);
+        }
+
+        #[method(centerStage:)]
+        fn _center_stage(&self, _sender: &AnyObject) {
+            CENTER_STAGE.store(true, Ordering::Relaxed);
         }
     }
 );
@@ -210,6 +216,24 @@ fn setup_menu_bar(mut commands: Commands) {
         ];
         let _: () = msg_send![fewer_item, setTarget: handler_ptr];
         let _: () = msg_send![settings_menu, addItem: fewer_item];
+
+        // Separator
+        let separator2: *const AnyObject =
+            msg_send![AnyClass::get("NSMenuItem").unwrap(), separatorItem];
+        let _: () = msg_send![settings_menu, addItem: separator2];
+
+        // "Center Stage" menu item
+        let center_title = NSString::from_str("Center Stage");
+        let center_key = NSString::from_str("0");
+        let center_item: *const AnyObject = msg_send![AnyClass::get("NSMenuItem").unwrap(), alloc];
+        let center_item: *const AnyObject = msg_send![
+            center_item,
+            initWithTitle: &*center_title,
+            action: sel!(centerStage:),
+            keyEquivalent: &*center_key
+        ];
+        let _: () = msg_send![center_item, setTarget: handler_ptr];
+        let _: () = msg_send![settings_menu, addItem: center_item];
 
         // Create top-level menu bar item and attach submenu
         let item_title = NSString::from_str("Settings");
