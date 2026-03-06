@@ -27,8 +27,12 @@ impl Plugin for HmdPlugin {
     }
 }
 
-/// Number of IMU samples to let the Madgwick filter stabilize before capturing the reference.
-const WARMUP_SAMPLES: u32 = 500;
+/// Duration (in seconds) to let the Madgwick filter stabilize before capturing the reference.
+/// The filter needs several seconds to converge toward gravity alignment.
+const WARMUP_DURATION_SECS: f64 = 3.0;
+
+/// Number of IMU samples before capturing the reference orientation (~3s at 1000Hz).
+const WARMUP_SAMPLES: u32 = (WARMUP_DURATION_SECS * 1000.0) as u32;
 
 fn tracking_thread(orientation: Arc<Mutex<Quat>>) {
     let glasses = ar_drivers::any_glasses();
@@ -46,10 +50,16 @@ fn tracking_thread(orientation: Arc<Mutex<Quat>>) {
         }
     };
 
+    // Measure actual IMU sample rate dynamically
+    let mut last_sample_time: Option<std::time::Instant> = None;
+    let mut measured_dt_sum: f64 = 0.0;
+    let mut measured_dt_count: u64 = 0;
+
     // Madgwick filter: sample_period ~1ms (1000Hz polling), beta = 0.1
     let mut ahrs = Madgwick::new(1.0 / 1000.0, 0.1);
     let mut sample_count: u32 = 0;
     let mut reference_quat: Option<nalgebra::UnitQuaternion<f64>> = None;
+    let mut log_counter: u32 = 0;
 
     loop {
         match glasses.read_event() {
@@ -58,6 +68,27 @@ fn tracking_thread(orientation: Arc<Mutex<Quat>>) {
                 gyroscope,
                 ..
             }) => {
+                // Measure actual sample interval
+                let now = std::time::Instant::now();
+                if let Some(prev) = last_sample_time {
+                    let dt = now.duration_since(prev).as_secs_f64();
+                    measured_dt_sum += dt;
+                    measured_dt_count += 1;
+
+                    // Update filter sample_period with measured rate after enough samples
+                    if measured_dt_count == 100 {
+                        let avg_dt = measured_dt_sum / measured_dt_count as f64;
+                        let avg_rate = 1.0 / avg_dt;
+                        info!(
+                            "Measured IMU rate: {:.1} Hz (avg dt={:.4}s), updating filter",
+                            avg_rate, avg_dt
+                        );
+                        ahrs = Madgwick::new(avg_dt, 0.1);
+                        // Reset filter state by continuing with new instance
+                    }
+                }
+                last_sample_time = Some(now);
+
                 let gyro = Vector3::new(gyroscope.x as f64, gyroscope.y as f64, gyroscope.z as f64);
                 let accel = Vector3::new(
                     accelerometer.x as f64,
@@ -83,6 +114,20 @@ fn tracking_thread(orientation: Arc<Mutex<Quat>>) {
                             relative.k as f32,
                             relative.w as f32,
                         );
+
+                        // Log orientation periodically to detect drift
+                        log_counter += 1;
+                        if log_counter.is_multiple_of(1000) {
+                            let (pitch, yaw, roll) = bevy_quat.to_euler(EulerRot::XYZ);
+                            info!(
+                                "[HMD] pitch={:.3}° yaw={:.3}° roll={:.3}° (sample #{})",
+                                pitch.to_degrees(),
+                                yaw.to_degrees(),
+                                roll.to_degrees(),
+                                sample_count,
+                            );
+                        }
+
                         if let Ok(mut lock) = orientation.lock() {
                             *lock = bevy_quat;
                         }
