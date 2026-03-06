@@ -31,9 +31,6 @@ impl Plugin for HmdPlugin {
 /// The filter needs several seconds to converge toward gravity alignment.
 const WARMUP_DURATION_SECS: f64 = 3.0;
 
-/// Number of IMU samples before capturing the reference orientation (~3s at 1000Hz).
-const WARMUP_SAMPLES: u32 = (WARMUP_DURATION_SECS * 1000.0) as u32;
-
 fn tracking_thread(orientation: Arc<Mutex<Quat>>) {
     let glasses = ar_drivers::any_glasses();
     let mut glasses = match glasses {
@@ -50,13 +47,13 @@ fn tracking_thread(orientation: Arc<Mutex<Quat>>) {
         }
     };
 
-    // Measure actual IMU sample rate dynamically
     let mut last_sample_time: Option<std::time::Instant> = None;
-    let mut measured_dt_sum: f64 = 0.0;
-    let mut measured_dt_count: u64 = 0;
+    let mut dt_sum: f64 = 0.0;
+    let mut dt_count: u64 = 0;
+    let mut filter_calibrated = false;
 
-    // Madgwick filter: sample_period ~1ms (1000Hz polling), beta = 0.1
     let mut ahrs = Madgwick::new(1.0 / 1000.0, 0.1);
+    let tracking_start = std::time::Instant::now();
     let mut sample_count: u32 = 0;
     let mut reference_quat: Option<nalgebra::UnitQuaternion<f64>> = None;
     let mut log_counter: u32 = 0;
@@ -68,23 +65,24 @@ fn tracking_thread(orientation: Arc<Mutex<Quat>>) {
                 gyroscope,
                 ..
             }) => {
-                // Measure actual sample interval
                 let now = std::time::Instant::now();
+
+                // Measure actual IMU sample interval
                 if let Some(prev) = last_sample_time {
                     let dt = now.duration_since(prev).as_secs_f64();
-                    measured_dt_sum += dt;
-                    measured_dt_count += 1;
+                    dt_sum += dt;
+                    dt_count += 1;
 
-                    // Update filter sample_period with measured rate after enough samples
-                    if measured_dt_count == 100 {
-                        let avg_dt = measured_dt_sum / measured_dt_count as f64;
-                        let avg_rate = 1.0 / avg_dt;
+                    // Recalibrate filter with measured rate once
+                    if !filter_calibrated && dt_count >= 100 {
+                        let avg_dt = dt_sum / dt_count as f64;
                         info!(
-                            "Measured IMU rate: {:.1} Hz (avg dt={:.4}s), updating filter",
-                            avg_rate, avg_dt
+                            "Measured IMU rate: {:.1} Hz (dt={:.4}s), recalibrating filter",
+                            1.0 / avg_dt,
+                            avg_dt
                         );
                         ahrs = Madgwick::new(avg_dt, 0.1);
-                        // Reset filter state by continuing with new instance
+                        filter_calibrated = true;
                     }
                 }
                 last_sample_time = Some(now);
@@ -99,10 +97,14 @@ fn tracking_thread(orientation: Arc<Mutex<Quat>>) {
                 if let Ok(q) = ahrs.update_imu(&gyro, &accel) {
                     sample_count = sample_count.saturating_add(1);
 
-                    // Capture reference orientation after warm-up
-                    if sample_count == WARMUP_SAMPLES {
+                    // Capture reference after time-based warmup (independent of IMU rate)
+                    let elapsed = now.duration_since(tracking_start).as_secs_f64();
+                    if reference_quat.is_none() && elapsed >= WARMUP_DURATION_SECS {
                         reference_quat = Some(*q);
-                        info!("Head tracking calibrated");
+                        info!(
+                            "Head tracking calibrated after {:.1}s ({} samples)",
+                            elapsed, sample_count
+                        );
                     }
 
                     if let Some(ref ref_q) = reference_quat {
