@@ -10,7 +10,8 @@
       "WebFetch(domain:github.com)",
       "Bash(npm info:*)",
       "Bash(npm search:*)",
-      "Bash(command:*)"
+      "Bash(command:*)",
+      "Bash(git status:*)"
     ]
   },
   "hooks": {
