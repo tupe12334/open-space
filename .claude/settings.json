@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(centy:*)",
+      "Bash(centy create:*)"
+    ]
+  }
+}
