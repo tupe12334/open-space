@@ -17,7 +17,7 @@ use bevy::{
 use camera::CameraPlugin;
 use debug::DebugPlugin;
 use hmd::HmdPlugin;
-use screen_capture::ScreenCapturePlugin;
+use screen_capture::{ensure_screen_capture_permission, ScreenCapturePlugin};
 use settings::SettingsPlugin;
 use stage::StagePlugin;
 use virtual_display::{create_virtual_displays_blocking, VirtualDisplayPlugin};
@@ -60,6 +60,7 @@ fn wait_for_physical_display_modes() {
 }
 
 fn main() {
+    ensure_screen_capture_permission();
     wait_for_physical_display_modes();
 
     // Load settings once, before anything else needs them.
