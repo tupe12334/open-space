@@ -1,6 +1,7 @@
 use bevy::{
     diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin},
     prelude::*,
+    window::Monitor,
 };
 
 use crate::camera::MainCamera;
@@ -24,6 +25,8 @@ fn debug_transforms(
     mut timer: ResMut<DebugTimer>,
     camera_query: Query<&Transform, With<MainCamera>>,
     screen_query: Query<(Entity, &Transform), With<ScreenMarker>>,
+    window_query: Query<&Window>,
+    monitor_query: Query<(Entity, &Monitor)>,
 ) {
     timer.0.tick(time.delta());
     if !timer.0.just_finished() {
@@ -49,6 +52,19 @@ fn debug_transforms(
             entity, tf.translation.x, tf.translation.y, tf.translation.z,
         );
     }
+
+    for window in &window_query {
+        info!(
+            "[DEBUG] Window pos=({:?}) size=({:.0}x{:.0}) scale={:.2}",
+            window.position,
+            window.resolution.width(),
+            window.resolution.height(),
+            window.resolution.scale_factor(),
+        );
+    }
+
+    let monitor_count = monitor_query.iter().count();
+    info!("[DEBUG] Active monitors: {}", monitor_count);
 }
 
 #[allow(dead_code)]

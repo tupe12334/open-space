@@ -195,7 +195,7 @@ fn create_virtual_displays(
     // We check all displays (not just virtual ones) because AR glasses or
     // other hardware may also need time to register their modes.
     {
-        let timeout = std::time::Duration::from_secs(5);
+        let timeout = std::time::Duration::from_secs(15);
         let poll_interval = std::time::Duration::from_millis(50);
         let start = std::time::Instant::now();
 
@@ -208,6 +208,7 @@ fn create_virtual_displays(
                 .collect();
 
             if missing.is_empty() {
+                info!("All display modes ready after {:.0?}", start.elapsed());
                 break;
             }
             if start.elapsed() > timeout {
@@ -219,8 +220,31 @@ fn create_virtual_displays(
             }
             std::thread::sleep(poll_interval);
         }
-        info!("All display modes ready after {:.0?}", start.elapsed());
     }
+
+    // Remove virtual displays whose modes never became available.
+    // Keeping them would cause winit to panic when enumerating monitors.
+    let virtual_ids: std::collections::HashSet<u32> =
+        displays.iter().map(|d| d.display_id).collect();
+    let modeless: std::collections::HashSet<u32> = crate::stage::get_active_displays(32)
+        .iter()
+        .filter(|(id, cg)| virtual_ids.contains(id) && cg.copy_display_modes().is_none())
+        .map(|(id, _)| *id)
+        .collect();
+    if !modeless.is_empty() {
+        warn!(
+            "Destroying {} virtual display(s) without modes: {:?}",
+            modeless.len(),
+            modeless
+        );
+        displays.retain(|d| !modeless.contains(&d.display_id));
+    }
+
+    info!(
+        "{} virtual display(s) active: {:?}",
+        displays.len(),
+        displays.iter().map(|d| d.display_id).collect::<Vec<_>>()
+    );
 
     VirtualDisplays {
         _displays: displays,
