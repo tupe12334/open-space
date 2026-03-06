@@ -1,3 +1,4 @@
+use std::sync::atomic::Ordering;
 use std::sync::{Arc, Mutex};
 
 use ahrs::{Ahrs, Madgwick};
@@ -5,6 +6,7 @@ use bevy::prelude::*;
 use nalgebra::Vector3;
 
 use crate::camera::MainCamera;
+use crate::settings::CENTER_STAGE;
 
 /// Shared glasses orientation, written by the tracking thread, read by the Bevy system.
 #[derive(Resource)]
@@ -105,6 +107,12 @@ fn tracking_thread(orientation: Arc<Mutex<Quat>>) {
                             "Head tracking calibrated after {:.1}s ({} samples)",
                             elapsed, sample_count
                         );
+                    }
+
+                    // Re-center: update reference to current orientation
+                    if CENTER_STAGE.swap(false, Ordering::Relaxed) {
+                        reference_quat = Some(*q);
+                        info!("Center stage: head tracking reference reset");
                     }
 
                     if let Some(ref ref_q) = reference_quat {
