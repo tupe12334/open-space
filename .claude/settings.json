@@ -17,7 +17,14 @@
       "Bash(cargo search:*)",
       "Bash(npx centy:*)",
       "Bash(cargo check:*)",
-      "Bash(cargo run:*)"
+      "Bash(cargo run:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git pull:*)",
+      "Bash(git:*)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "WebFetch(domain:api.github.com)",
+      "Bash(cargo info:*)"
     ]
   },
   "hooks": {
