@@ -136,7 +136,7 @@ fn create_virtual_displays(
             let mode: *const AnyObject =
                 msg_send![mode, initWithWidth: width, height: height, refreshRate: refresh_rate];
 
-            info!(
+            eprintln!(
                 "Virtual display mode: {}x{} @ {}Hz",
                 width, height, refresh_rate
             );
@@ -154,7 +154,7 @@ fn create_virtual_displays(
             let display: *const AnyObject = msg_send![display, initWithDescriptor: descriptor];
 
             if display.is_null() {
-                warn!(
+                eprintln!(
                     "Virtual display {} creation failed (initWithDescriptor returned nil)",
                     i + 1
                 );
@@ -164,11 +164,11 @@ fn create_virtual_displays(
             }
 
             let display_id: u32 = msg_send![display, displayID];
-            info!("Virtual display {} created with ID {}", i + 1, display_id);
+            eprintln!("Virtual display {} created with ID {}", i + 1, display_id);
 
             // Apply settings
             let result: bool = msg_send![display, applySettings: settings];
-            info!(
+            eprintln!(
                 "Apply settings result for display {}: {}",
                 display_id, result
             );
@@ -179,7 +179,7 @@ fn create_virtual_displays(
             // mode is autoreleased via arrayWithObject, don't double-release
 
             if !result {
-                warn!(
+                eprintln!(
                     "applySettings failed for virtual display {} (ID {}), releasing it",
                     i + 1,
                     display_id
@@ -198,7 +198,7 @@ fn create_virtual_displays(
         }
     }
 
-    info!(
+    eprintln!(
         "Created {} virtual display(s): {:?}",
         displays.len(),
         displays.iter().map(|d| d.display_id).collect::<Vec<_>>()
@@ -222,12 +222,20 @@ fn create_virtual_displays(
                 .map(|(id, _)| *id)
                 .collect();
 
+            eprintln!(
+                "[vdisp] poll: {} active displays, {} missing modes: {:?} (elapsed {:.0?})",
+                all_displays.len(),
+                missing.len(),
+                missing,
+                start.elapsed()
+            );
+
             if missing.is_empty() {
-                info!("All display modes ready after {:.0?}", start.elapsed());
+                eprintln!("All display modes ready after {:.0?}", start.elapsed());
                 break;
             }
             if start.elapsed() > timeout {
-                warn!(
+                eprintln!(
                     "Timed out waiting for display modes on display(s): {:?}",
                     missing
                 );
@@ -247,7 +255,7 @@ fn create_virtual_displays(
         .map(|(id, _)| *id)
         .collect();
     if !modeless.is_empty() {
-        warn!(
+        eprintln!(
             "Destroying {} virtual display(s) without modes: {:?}",
             modeless.len(),
             modeless
@@ -269,14 +277,14 @@ fn create_virtual_displays(
                 .copied()
                 .collect();
             if still_active.is_empty() {
-                info!(
+                eprintln!(
                     "Destroyed displays removed from active list after {:.0?}",
                     destroy_start.elapsed()
                 );
                 break;
             }
             if destroy_start.elapsed() > destroy_timeout {
-                warn!(
+                eprintln!(
                     "Timed out waiting for destroyed displays to leave active list: {:?}",
                     still_active
                 );
@@ -286,7 +294,7 @@ fn create_virtual_displays(
         }
     }
 
-    info!(
+    eprintln!(
         "{} virtual display(s) active: {:?}",
         displays.len(),
         displays.iter().map(|d| d.display_id).collect::<Vec<_>>()
