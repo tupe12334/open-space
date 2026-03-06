@@ -89,9 +89,8 @@ pub struct SettingsPlugin;
 
 impl Plugin for SettingsPlugin {
     fn build(&self, app: &mut App) {
-        let settings = load_settings();
-        app.insert_resource(settings)
-            .add_systems(Startup, setup_menu_bar)
+        // AppSettings resource is inserted by main() before App::new().
+        app.add_systems(Startup, setup_menu_bar)
             .add_systems(Update, poll_menu_changes);
     }
 }
@@ -100,7 +99,7 @@ fn settings_path() -> PathBuf {
     PathBuf::from(SETTINGS_FILE)
 }
 
-fn load_settings() -> AppSettings {
+pub fn load_settings() -> AppSettings {
     let path = settings_path();
     if let Ok(data) = fs::read_to_string(&path) {
         if let Ok(val) = serde_json::from_str::<serde_json::Value>(&data) {

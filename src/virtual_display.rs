@@ -69,24 +69,17 @@ impl VirtualDisplays {
 pub struct VirtualDisplayPlugin;
 
 impl Plugin for VirtualDisplayPlugin {
-    fn build(&self, app: &mut App) {
-        // Insert an empty resource so Res<VirtualDisplays> is always valid.
-        // The actual displays are created in PreStartup, after the first
-        // create_monitors() call has already run (seeing only physical displays).
-        app.insert_resource(VirtualDisplays {
-            _displays: Vec::new(),
-        });
-        app.add_systems(PreStartup, setup_virtual_displays);
+    fn build(&self, _app: &mut App) {
+        // VirtualDisplays resource is inserted by main() before App::new(),
+        // so it is already available. Nothing else to do here.
     }
 }
 
-fn setup_virtual_displays(
-    mut vdisplays: ResMut<VirtualDisplays>,
-    settings: Res<crate::settings::AppSettings>,
-) {
-    let num_screens = settings.num_screens as usize;
-    let created = create_virtual_displays(num_screens, 1920, 1080, 60.0);
-    *vdisplays = created;
+/// Create virtual displays eagerly (call from main before App::new).
+/// This blocks while waiting for display modes, but that's fine because
+/// the event loop hasn't started yet so macOS won't show "Not Responding".
+pub fn create_virtual_displays_blocking(num_screens: usize) -> VirtualDisplays {
+    create_virtual_displays(num_screens, 1920, 1080, 60.0)
 }
 
 /// Alloc+init an ObjC object, returning a retained raw pointer.
