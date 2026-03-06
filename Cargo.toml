@@ -29,7 +29,7 @@ dispatch2 = "0.1.0"
 core-foundation = { version = "0.10.1", default-features = false }
 rand = "0.8.5"
 libc = "0.2.161"
-screen-capture-kit = "0.3.1"
+screen-capture-kit = "0.6.1"
 ar-drivers = "0.4.3"
 ahrs = "0.8.0"
 nalgebra = "0.34"

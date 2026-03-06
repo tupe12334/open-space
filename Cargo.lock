@@ -1650,6 +1650,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "core-audio-types"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d2b5354d2dd3c98fe23ddceaf4a2a4d38756b72c950d8b71298c57af5bc1e293"
+dependencies = [
+ "cfg-if",
+ "core-foundation-sys",
+ "libc",
+]
+
+[[package]]
 name = "core-foundation"
 version = "0.9.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1710,7 +1721,6 @@ dependencies = [
  "cfg-if",
  "core-foundation 0.10.1",
  "libc",
- "objc2",
 ]
 
 [[package]]
@@ -1735,10 +1745,26 @@ checksum = "735c25a66449364e6850ac0e27e45d5b13c6e6fe6f44a2f96cbff2d9d29447e3"
 dependencies = [
  "block",
  "cfg-if",
- "core-audio-types",
+ "core-audio-types 0.1.6",
  "core-foundation 0.10.1",
  "core-graphics2 0.4.1",
  "core-video 0.4.3",
+ "libc",
+ "objc2",
+]
+
+[[package]]
+name = "core-media"
+version = "0.7.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "32472110b234059f80a051526122cfd274661acf0ff932a2f18c70a570a10402"
+dependencies = [
+ "block",
+ "cfg-if",
+ "core-audio-types 0.2.0",
+ "core-foundation 0.10.1",
+ "core-graphics2 0.5.2",
+ "core-video 0.5.2",
  "libc",
  "objc2",
 ]
@@ -3551,7 +3577,7 @@ dependencies = [
  "cargo-husky",
  "core-foundation 0.10.1",
  "core-graphics2 0.5.2",
- "core-media",
+ "core-media 0.5.1",
  "core-video 0.5.2",
  "dispatch2",
  "libc",
@@ -4091,14 +4117,14 @@ checksum = "94143f37725109f92c262ed2cf5e59bce7498c01bcc1502d7b9afe439a4e9f49"
 
 [[package]]
 name = "screen-capture-kit"
-version = "0.3.1"
+version = "0.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e3da365034668811518d19b330f2b35f8517f948fe01ef48726688c0536d1d0e"
+checksum = "ba0a56fa0d4338e36315518e126b8c9941f6979058888976e5ef4b84f0668661"
 dependencies = [
  "block2",
  "core-foundation 0.10.1",
- "core-graphics2 0.4.1",
- "core-media",
+ "core-graphics2 0.5.2",
+ "core-media 0.7.1",
  "dispatch2",
  "libc",
  "objc2",
