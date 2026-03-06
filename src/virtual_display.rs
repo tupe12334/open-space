@@ -49,6 +49,11 @@ pub struct VirtualDisplayInfo {
 }
 
 impl VirtualDisplays {
+    #[allow(dead_code)]
+    pub fn display_ids(&self) -> Vec<u32> {
+        self._displays.iter().map(|d| d.display_id).collect()
+    }
+
     pub fn displays(&self) -> Vec<VirtualDisplayInfo> {
         self._displays
             .iter()
@@ -145,6 +150,16 @@ fn create_virtual_displays(
             // Create virtual display with descriptor
             let display: *const AnyObject = msg_send![display_cls, alloc];
             let display: *const AnyObject = msg_send![display, initWithDescriptor: descriptor];
+
+            if display.is_null() {
+                warn!(
+                    "Virtual display {} creation failed (initWithDescriptor returned nil)",
+                    i + 1
+                );
+                ffi::objc_release(descriptor as *mut _);
+                ffi::objc_release(settings as *mut _);
+                continue;
+            }
 
             let display_id: u32 = msg_send![display, displayID];
             info!("Virtual display {} created with ID {}", i + 1, display_id);

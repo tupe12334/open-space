@@ -22,13 +22,4 @@ fn spawn_camera(mut commands: Commands) {
         Transform::from_xyz(0.0, 0.0, 0.0),
         MainCamera,
     ));
-
-    // commands.spawn((
-    //     PointLight {
-    //         intensity: 1500.0,
-    //         shadows_enabled: true,
-    //         ..default()
-    //     },
-    //     Transform::from_xyz(4.0, 8.0, 4.0),
-    // ));
 }

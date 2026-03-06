@@ -33,7 +33,8 @@ pub fn get_active_displays(max: usize) -> Vec<(u32, CGDisplay)> {
 pub struct AssetHandles {
     pub screens: Vec<Handle<Image>>,
     /// CGDirectDisplayID for each screen, in the same order as `screens`.
-    pub _display_ids: Vec<u32>,
+    #[allow(dead_code)]
+    pub display_ids: Vec<u32>,
 }
 
 pub struct StagePlugin;
@@ -225,6 +226,6 @@ fn spawn_screen(
 
     commands.insert_resource(AssetHandles {
         screens: screen_handles,
-        _display_ids: display_ids,
+        display_ids,
     });
 }
