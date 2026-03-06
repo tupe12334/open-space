@@ -70,7 +70,12 @@ pub struct VirtualDisplayPlugin;
 
 impl Plugin for VirtualDisplayPlugin {
     fn build(&self, app: &mut App) {
-        let displays = create_virtual_displays(6, 1920, 1080, 60.0);
+        let num_screens = app
+            .world()
+            .get_resource::<crate::settings::AppSettings>()
+            .map(|s| s.num_screens as usize)
+            .unwrap_or(6);
+        let displays = create_virtual_displays(num_screens, 1920, 1080, 60.0);
         app.insert_resource(displays);
     }
 }
