@@ -41,6 +41,74 @@ cargo-husky = { version = "1", default-features = false, features = ["user-hooks
 [workspace]
 resolver = "2"
 
+[workspace.lints.clippy]
+# Pedantic: catches subtle bugs and enforces idiomatic Rust
+pedantic = { level = "warn", priority = -1 }
+# Nursery: early detection of newer lint patterns
+nursery = { level = "warn", priority = -1 }
+# Cargo: Cargo manifest best practices
+cargo = { level = "warn", priority = -1 }
+
+# Selected restriction lints (enabling all restriction lints conflicts with pedantic)
+dbg_macro = "warn"
+empty_enum_variants_with_brackets = "warn"
+empty_structs_with_brackets = "warn"
+error_impl_error = "warn"
+exit = "warn"
+float_cmp_const = "warn"
+fn_to_numeric_cast_any = "warn"
+format_push_string = "warn"
+get_unwrap = "warn"
+if_then_some_else_none = "warn"
+infinite_loop = "warn"
+lossy_float_literal = "warn"
+mem_forget = "warn"
+missing_assert_message = "warn"
+mixed_read_write_in_expression = "warn"
+mutex_atomic = "warn"
+needless_raw_strings = "warn"
+pathbuf_init_then_push = "warn"
+rc_buffer = "warn"
+rc_mutex = "warn"
+redundant_type_annotations = "warn"
+rest_pat_in_fully_bound_structs = "warn"
+same_name_method = "warn"
+self_named_module_files = "warn"
+str_to_string = "warn"
+string_add = "warn"
+string_to_string = "warn"
+suspicious_xor_used_as_pow = "warn"
+tests_outside_test_module = "warn"
+try_err = "warn"
+unnecessary_self_imports = "warn"
+unneeded_field_pattern = "warn"
+verbose_file_reads = "warn"
+
+# Intentionally allowed pedantic/nursery lints with justification:
+# This crate heavily uses Bevy and ObjC interop which requires many unsafe casts
+cast_possible_truncation = "allow"
+cast_precision_loss = "allow"
+cast_sign_loss = "allow"
+cast_lossless = "allow"
+# Bevy systems use many parameters by design
+too_many_arguments = "allow"
+# Bevy query types are inherently complex
+type_complexity = "allow"
+# Module naming follows Bevy plugin conventions
+module_name_repetitions = "allow"
+# Wildcard imports are idiomatic for bevy::prelude::*
+wildcard_imports = "allow"
+# Missing docs are acceptable for this application crate
+missing_docs_in_private_items = "allow"
+# Missing errors doc not applicable for most Bevy system functions
+missing_errors_doc = "allow"
+missing_panics_doc = "allow"
+# multiple_crate_versions is common with large dependency trees like Bevy
+multiple_crate_versions = "allow"
+
+[lints]
+workspace = true
+
 # Enable optimization in debug mode
 [profile.dev]
 opt-level = 1
