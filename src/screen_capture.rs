@@ -39,10 +39,14 @@ pub struct ScreenCapturePlugin;
 
 impl Plugin for ScreenCapturePlugin {
     fn build(&self, app: &mut App) {
-        // Pre-allocate 2 channels; unused ones stay empty
+        let num_screens = app
+            .world()
+            .get_resource::<crate::settings::AppSettings>()
+            .map(|s| s.num_screens as usize)
+            .unwrap_or(6);
         let mut senders = Vec::new();
         let mut receivers = Vec::new();
-        for _ in 0..6 {
+        for _ in 0..num_screens {
             let (tx, rx) = mpsc::channel::<Vec<u8>>(60);
             senders.push(Arc::new(tx));
             receivers.push(rx);
@@ -119,7 +123,7 @@ declare_class!(
                     pixel_buffer.unlock_base_address(kCVPixelBufferLock_ReadOnly);
 
                     if let Err(e) = self.ivars().frame_sender.try_send(rgba) {
-                        error!("Failed to send frame data: {}", e);
+                        debug!("Dropped frame (channel full): {}", e);
                     }
 
                     // println!("base address: {:?}", base_address);
@@ -365,7 +369,12 @@ fn update_screen_texture(
         .len()
         .min(asset_handles.screens.len());
     for i in 0..count {
-        if let Ok(frame_data) = frame_channel.receivers[i].try_recv() {
+        // Drain all pending frames and keep only the latest
+        let mut latest = None;
+        while let Ok(frame_data) = frame_channel.receivers[i].try_recv() {
+            latest = Some(frame_data);
+        }
+        if let Some(frame_data) = latest {
             if let Some(image) = images.get_mut(&asset_handles.screens[i]) {
                 image.data = frame_data;
             }
