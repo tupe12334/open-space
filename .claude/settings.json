@@ -4,7 +4,23 @@
       "Bash(centy:*)",
       "Bash(centy create:*)",
       "Bash(git push:*)",
-      "Bash(uuidgen:*)"
+      "Bash(uuidgen:*)",
+      "WebSearch",
+      "WebFetch(domain:www.npmjs.com)",
+      "WebFetch(domain:github.com)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "pnpm dlx block-no-verify"
+          }
+        ]
+      }
     ]
   }
 }
