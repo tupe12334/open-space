@@ -91,7 +91,7 @@ declare_class!(
                     // println!("frame_sender: {:?}", self.ivars().frame_sender);
 
                     if pixel_buffer.get_pixel_format() != kCVPixelFormatType_32BGRA {
-                        println!("Unexpected pixel format");
+                        warn!("Unexpected pixel format");
                         return;
                     }
                     // let _ = self.ivars().frame_sender.send(rgba_data);
@@ -164,7 +164,7 @@ declare_class!(
     unsafe impl SCStreamDelegate for Delegate {
         #[method(stream:didStopWithError:)]
         unsafe fn stream_did_stop_with_error(&self, _stream: &SCStream, error: &NSError) {
-            println!("error: {:?}", error);
+            error!("Stream stopped with error: {:?}", error);
         }
     }
 
@@ -225,14 +225,14 @@ fn setup_screen_capture(
         );
         let shareable_content = sc_rx.blocking_recv().unwrap();
         if let Err(error) = shareable_content {
-            println!("error: {:?}", error);
+            error!("Failed to get shareable content: {:?}", error);
             return;
         }
         let shareable_content = shareable_content.unwrap();
 
         let sc_displays = shareable_content.displays();
         if sc_displays.is_empty() {
-            println!("no display found");
+            warn!("No display found for screen capture");
             return;
         }
 
@@ -305,8 +305,8 @@ fn setup_screen_capture(
             );
             let output = ProtocolObject::from_ref(&*delegate);
             if let Err(ret) = stream.add_stream_output(output, SCStreamOutputType::Screen, &queue) {
-                println!(
-                    "error adding output for display {} (ID {}): {:?}",
+                error!(
+                    "Error adding output for display {} (ID {}): {:?}",
                     sender_idx, target_id, ret
                 );
                 continue;
@@ -320,8 +320,7 @@ fn setup_screen_capture(
         std::thread::sleep(std::time::Duration::from_secs(5));
 
         info!("STARTING CAP for {} display(s)", _streams.len());
-        for (i, stream) in _streams.iter().enumerate() {
-            let idx = i;
+        for (idx, stream) in _streams.iter().enumerate() {
             stream.start_capture(move |result| {
                 info!("start_capture for display {}", idx);
                 if let Some(error) = result {
@@ -361,5 +360,5 @@ fn update_screen_texture(
     }
 
     // Touch materials to force texture update
-    for (_, mut _material) in materials.iter_mut() {}
+    for (_, _material) in &mut materials {}
 }

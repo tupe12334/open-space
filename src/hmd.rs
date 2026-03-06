@@ -162,7 +162,7 @@ fn apply_glasses_orientation(
         Err(_) => return,
     };
 
-    for mut transform in query.iter_mut() {
+    for mut transform in &mut query {
         transform.rotation = quat;
     }
 }

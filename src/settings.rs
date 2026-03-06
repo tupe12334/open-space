@@ -261,7 +261,7 @@ fn poll_menu_changes(
         settings.stage_distance =
             (settings.stage_distance + delta).clamp(MIN_DISTANCE, MAX_DISTANCE);
 
-        for mut transform in &mut screen_transforms {
+        for mut transform in screen_transforms.iter_mut() {
             transform.translation.z = -settings.stage_distance;
         }
     }
