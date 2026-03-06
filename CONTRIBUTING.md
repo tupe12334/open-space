@@ -6,6 +6,19 @@ If you already have a Rust environment set up, you can use the `cargo install` c
 
 Might have to install Xcode app or Xcode command line tools (run `xcode-select --install`) to get bevy working. Dynamic linking is already configured for bevy in `Cargo.toml`.
 
+## Git Hooks
+
+This project uses [cargo-husky](https://github.com/rhysd/cargo-husky) to manage Git hooks. Hooks are automatically installed when you run `cargo test`.
+
+### Pre-commit
+
+- `cargo fmt --check` — ensures code is properly formatted
+- `cargo clippy -- -D warnings` — catches common mistakes and lint issues
+
+### Pre-push
+
+- `cargo test` — runs the full test suite before pushing
+
 ## Getting started
 
 Set your XReal display as an extended display (Settings -> Displays -> Use as -> Extended display).
