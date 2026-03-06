@@ -2,6 +2,7 @@ mod camera;
 mod debug;
 mod hmd;
 mod screen_capture;
+mod settings;
 mod stage;
 mod virtual_display;
 
@@ -14,6 +15,7 @@ use camera::CameraPlugin;
 use debug::DebugPlugin;
 use hmd::HmdPlugin;
 use screen_capture::ScreenCapturePlugin;
+use settings::SettingsPlugin;
 use stage::StagePlugin;
 use virtual_display::VirtualDisplayPlugin;
 
@@ -47,6 +49,7 @@ fn main() {
             }),
             ..default()
         }))
+        .add_plugins(SettingsPlugin)
         .add_plugins(CameraPlugin)
         .add_plugins(VirtualDisplayPlugin)
         .add_plugins(StagePlugin)

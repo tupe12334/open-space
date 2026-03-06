@@ -3436,6 +3436,7 @@ dependencies = [
  "objc2-foundation",
  "rand",
  "screen-capture-kit",
+ "serde_json",
  "tokio",
  "winit",
 ]

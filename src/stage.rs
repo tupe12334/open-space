@@ -6,8 +6,12 @@ use bevy::{
 use core_graphics2::display::CGDisplay;
 use rand::Rng;
 
+use crate::settings::AppSettings;
 use crate::virtual_display::VirtualDisplays;
 use crate::ScaleFactor;
+
+#[derive(Component)]
+pub struct ScreenMarker;
 
 extern "C" {
     fn CGGetActiveDisplayList(max: u32, displays: *mut u32, count: *mut u32) -> i32;
@@ -108,6 +112,7 @@ fn spawn_screen(
     mut meshes: ResMut<Assets<Mesh>>,
     scale_factor: Res<ScaleFactor>,
     virtual_displays: Res<VirtualDisplays>,
+    settings: Res<AppSettings>,
 ) {
     info!("Spawning screen");
     let mut rng = rand::thread_rng();
@@ -215,7 +220,8 @@ fn spawn_screen(
                 Vec2::new(half_width, half_height),
             )))),
             MeshMaterial3d(screen_material),
-            Transform::from_xyz(x_offset, y_offset, -6.0),
+            Transform::from_xyz(x_offset, y_offset, -settings.stage_distance),
+            ScreenMarker,
         ));
     }
 
