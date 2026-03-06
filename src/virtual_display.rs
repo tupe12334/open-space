@@ -69,15 +69,17 @@ impl VirtualDisplays {
 pub struct VirtualDisplayPlugin;
 
 impl Plugin for VirtualDisplayPlugin {
-    fn build(&self, app: &mut App) {
-        let num_screens = app
-            .world()
-            .get_resource::<crate::settings::AppSettings>()
-            .map(|s| s.num_screens as usize)
-            .unwrap_or(6);
-        let displays = create_virtual_displays(num_screens, 1920, 1080, 60.0);
-        app.insert_resource(displays);
+    fn build(&self, _app: &mut App) {
+        // VirtualDisplays resource is inserted by main() before App::new(),
+        // so it is already available. Nothing else to do here.
     }
+}
+
+/// Create virtual displays eagerly (call from main before App::new).
+/// This blocks while waiting for display modes, but that's fine because
+/// the event loop hasn't started yet so macOS won't show "Not Responding".
+pub fn create_virtual_displays_blocking(num_screens: usize) -> VirtualDisplays {
+    create_virtual_displays(num_screens, 1920, 1080, 60.0)
 }
 
 /// Alloc+init an ObjC object, returning a retained raw pointer.
@@ -166,12 +168,25 @@ fn create_virtual_displays(
 
             // Apply settings
             let result: bool = msg_send![display, applySettings: settings];
-            info!("Apply settings result: {}", result);
+            info!(
+                "Apply settings result for display {}: {}",
+                display_id, result
+            );
 
             // Release temporaries (descriptor, settings, mode are not needed after this)
             ffi::objc_release(descriptor as *mut _);
             ffi::objc_release(settings as *mut _);
             // mode is autoreleased via arrayWithObject, don't double-release
+
+            if !result {
+                warn!(
+                    "applySettings failed for virtual display {} (ID {}), releasing it",
+                    i + 1,
+                    display_id
+                );
+                ffi::objc_release(display as *mut _);
+                continue;
+            }
 
             // Keep display alive (we own the +1 from alloc/init)
             displays.push(VirtualDisplay {
@@ -185,6 +200,94 @@ fn create_virtual_displays(
 
     info!(
         "Created {} virtual display(s): {:?}",
+        displays.len(),
+        displays.iter().map(|d| d.display_id).collect::<Vec<_>>()
+    );
+
+    // Poll until macOS has registered display modes for ALL active displays.
+    // CGDisplayCopyAllDisplayModes returns NULL until the modes are ready;
+    // winit will panic if it enumerates monitors before that happens.
+    // We check all displays (not just virtual ones) because AR glasses or
+    // other hardware may also need time to register their modes.
+    {
+        let timeout = std::time::Duration::from_secs(15);
+        let poll_interval = std::time::Duration::from_millis(50);
+        let start = std::time::Instant::now();
+
+        loop {
+            let all_displays = crate::stage::get_active_displays(32);
+            let missing: Vec<u32> = all_displays
+                .iter()
+                .filter(|(_, cg)| cg.copy_display_modes().is_none())
+                .map(|(id, _)| *id)
+                .collect();
+
+            if missing.is_empty() {
+                info!("All display modes ready after {:.0?}", start.elapsed());
+                break;
+            }
+            if start.elapsed() > timeout {
+                warn!(
+                    "Timed out waiting for display modes on display(s): {:?}",
+                    missing
+                );
+                break;
+            }
+            std::thread::sleep(poll_interval);
+        }
+    }
+
+    // Remove virtual displays whose modes never became available.
+    // Keeping them would cause winit to panic when enumerating monitors.
+    let virtual_ids: std::collections::HashSet<u32> =
+        displays.iter().map(|d| d.display_id).collect();
+    let modeless: std::collections::HashSet<u32> = crate::stage::get_active_displays(32)
+        .iter()
+        .filter(|(id, cg)| virtual_ids.contains(id) && cg.copy_display_modes().is_none())
+        .map(|(id, _)| *id)
+        .collect();
+    if !modeless.is_empty() {
+        warn!(
+            "Destroying {} virtual display(s) without modes: {:?}",
+            modeless.len(),
+            modeless
+        );
+        displays.retain(|d| !modeless.contains(&d.display_id));
+
+        // Wait until destroyed displays are no longer in CGGetActiveDisplayList.
+        // This closes the race window where create_monitors() could still see them.
+        let destroy_timeout = std::time::Duration::from_secs(5);
+        let destroy_start = std::time::Instant::now();
+        loop {
+            let active_ids: std::collections::HashSet<u32> = crate::stage::get_active_displays(32)
+                .iter()
+                .map(|(id, _)| *id)
+                .collect();
+            let still_active: Vec<u32> = modeless
+                .iter()
+                .filter(|id| active_ids.contains(id))
+                .copied()
+                .collect();
+            if still_active.is_empty() {
+                info!(
+                    "Destroyed displays removed from active list after {:.0?}",
+                    destroy_start.elapsed()
+                );
+                break;
+            }
+            if destroy_start.elapsed() > destroy_timeout {
+                warn!(
+                    "Timed out waiting for destroyed displays to leave active list: {:?}",
+                    still_active
+                );
+                break;
+            }
+            std::thread::sleep(std::time::Duration::from_millis(50));
+        }
+    }
+
+    info!(
+        "{} virtual display(s) active: {:?}",
         displays.len(),
         displays.iter().map(|d| d.display_id).collect::<Vec<_>>()
     );

@@ -123,7 +123,7 @@ declare_class!(
                     pixel_buffer.unlock_base_address(kCVPixelBufferLock_ReadOnly);
 
                     if let Err(e) = self.ivars().frame_sender.try_send(rgba) {
-                        error!("Failed to send frame data: {}", e);
+                        debug!("Dropped frame (channel full): {}", e);
                     }
 
                     // println!("base address: {:?}", base_address);
@@ -348,7 +348,12 @@ fn update_screen_texture(
         .len()
         .min(asset_handles.screens.len());
     for i in 0..count {
-        if let Ok(frame_data) = frame_channel.receivers[i].try_recv() {
+        // Drain all pending frames and keep only the latest
+        let mut latest = None;
+        while let Ok(frame_data) = frame_channel.receivers[i].try_recv() {
+            latest = Some(frame_data);
+        }
+        if let Some(frame_data) = latest {
             if let Some(image) = images.get_mut(&asset_handles.screens[i]) {
                 image.data = frame_data;
             }
