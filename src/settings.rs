@@ -38,7 +38,14 @@ impl Plugin for SettingsPlugin {
         app.insert_resource(settings)
             .init_resource::<SettingsUiOpen>()
             .add_systems(Startup, spawn_settings_ui)
-            .add_systems(Update, (toggle_settings_ui, handle_settings_input, update_distance_label));
+            .add_systems(
+                Update,
+                (
+                    toggle_settings_ui,
+                    handle_settings_input,
+                    update_distance_label,
+                ),
+            );
     }
 }
 

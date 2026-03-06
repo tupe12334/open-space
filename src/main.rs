@@ -8,7 +8,7 @@ mod virtual_display;
 
 use bevy::{
     prelude::*,
-    window::{PresentMode, WindowLevel, WindowMode},
+    window::{PresentMode, WindowMode},
 };
 
 use camera::CameraPlugin;

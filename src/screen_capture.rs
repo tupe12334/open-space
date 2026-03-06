@@ -10,7 +10,7 @@ use dispatch2::{Queue, QueueAttribute};
 use libc::size_t;
 use objc2::mutability;
 use objc2::{
-    declare_class, extern_methods, msg_send, msg_send_id,
+    declare_class, msg_send_id,
     rc::{Allocated, Id},
     runtime::ProtocolObject,
     ClassType, DeclaredClass,
@@ -103,10 +103,10 @@ declare_class!(
                     );
 
                     // Create RGBA buffer with pre-allocated capacity
-                    let mut rgba = Vec::with_capacity((width * height * 4) as usize);
+                    let mut rgba = Vec::with_capacity(width * height * 4);
                     for y in 0..height {
                         for x in 0..width {
-                            let src_idx = (y * bytes_per_row + x * 4) as usize;
+                            let src_idx = y * bytes_per_row + x * 4;
                             // BGRA to RGBA conversion
                             let b = pixels[src_idx];
                             let g = pixels[src_idx + 1];
@@ -300,9 +300,7 @@ fn setup_screen_capture(
                 QueueAttribute::Serial,
             );
             let output = ProtocolObject::from_ref(&*delegate);
-            if let Err(ret) =
-                stream.add_stream_output(output, SCStreamOutputType::Screen, &queue)
-            {
+            if let Err(ret) = stream.add_stream_output(output, SCStreamOutputType::Screen, &queue) {
                 println!(
                     "error adding output for display {} (ID {}): {:?}",
                     sender_idx, target_id, ret
@@ -341,7 +339,10 @@ fn update_screen_texture(
     asset_handles: Res<AssetHandles>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
-    let count = frame_channel.receivers.len().min(asset_handles.screens.len());
+    let count = frame_channel
+        .receivers
+        .len()
+        .min(asset_handles.screens.len());
     for i in 0..count {
         if let Ok(frame_data) = frame_channel.receivers[i].try_recv() {
             if let Some(image) = images.get_mut(&asset_handles.screens[i]) {

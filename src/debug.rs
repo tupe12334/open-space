@@ -16,6 +16,7 @@ impl Plugin for DebugPlugin {
     }
 }
 
+#[allow(dead_code)]
 fn print_position(query: Query<(Entity, &Transform)>) {
     // Log the entity ID and translation of each entity with a `Position` component.
     for (entity, transform) in query.iter() {
@@ -26,6 +27,7 @@ fn print_position(query: Query<(Entity, &Transform)>) {
     }
 }
 
+#[allow(dead_code)]
 fn check_asset_handles(asset_server: Res<AssetServer>, asset_handles: Res<AssetHandles>) {
     for (i, handle) in asset_handles.screens.iter().enumerate() {
         info!(
