@@ -1,0 +1,6 @@
+version: 1
+
+rules:
+  - path: ".centy/**"
+    access: read
+    reason: "Use centy cli to manage centy files"

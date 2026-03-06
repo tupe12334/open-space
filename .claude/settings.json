@@ -24,6 +24,24 @@
             "command": "pnpm dlx block-no-verify"
           }
         ]
+      },
+      {
+        "matcher": "Read|Glob|Grep",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "npx ai-fs-permissions --op read"
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|Write|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "npx ai-fs-permissions --op write"
+          }
+        ]
       }
     ]
   }
