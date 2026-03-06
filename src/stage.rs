@@ -33,7 +33,7 @@ pub fn get_active_displays(max: usize) -> Vec<(u32, CGDisplay)> {
 pub struct AssetHandles {
     pub screens: Vec<Handle<Image>>,
     /// CGDirectDisplayID for each screen, in the same order as `screens`.
-    pub display_ids: Vec<u32>,
+    pub _display_ids: Vec<u32>,
 }
 
 pub struct StagePlugin;
@@ -47,7 +47,7 @@ impl Plugin for StagePlugin {
 fn spawn_stage(
     mut commands: Commands,
     mut materials: ResMut<Assets<StandardMaterial>>,
-    mut images: ResMut<Assets<Image>>,
+    _images: ResMut<Assets<Image>>,
     mut meshes: ResMut<Assets<Mesh>>,
 ) {
     info!("Spawning stage");
@@ -151,8 +151,6 @@ fn spawn_screen(
 
     let mut screen_handles: Vec<Handle<Image>> = Vec::new();
     let mut display_ids: Vec<u32> = Vec::new();
-    let total = screen_specs.len();
-
     for (i, &(display_id, width, height)) in screen_specs.iter().enumerate() {
         let mut screen_texture = Image::new(
             Extent3d {
@@ -227,6 +225,6 @@ fn spawn_screen(
 
     commands.insert_resource(AssetHandles {
         screens: screen_handles,
-        display_ids,
+        _display_ids: display_ids,
     });
 }

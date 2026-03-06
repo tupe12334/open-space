@@ -7,16 +7,21 @@ const DEFAULT_STAGE_DISTANCE: f32 = 6.0;
 const DISTANCE_STEP: f32 = 0.5;
 const MIN_DISTANCE: f32 = 1.0;
 const MAX_DISTANCE: f32 = 30.0;
+const DEFAULT_NUM_SCREENS: u32 = 6;
+const MIN_NUM_SCREENS: u32 = 1;
+const MAX_NUM_SCREENS: u32 = 6;
 
 #[derive(Resource, Clone)]
 pub struct AppSettings {
     pub stage_distance: f32,
+    pub num_screens: u32,
 }
 
 impl Default for AppSettings {
     fn default() -> Self {
         Self {
             stage_distance: DEFAULT_STAGE_DISTANCE,
+            num_screens: DEFAULT_NUM_SCREENS,
         }
     }
 }
@@ -26,6 +31,9 @@ struct SettingsUiRoot;
 
 #[derive(Component)]
 struct DistanceLabel;
+
+#[derive(Component)]
+struct ScreenCountLabel;
 
 #[derive(Resource, Default)]
 struct SettingsUiOpen(bool);
@@ -38,7 +46,15 @@ impl Plugin for SettingsPlugin {
         app.insert_resource(settings)
             .init_resource::<SettingsUiOpen>()
             .add_systems(Startup, spawn_settings_ui)
-            .add_systems(Update, (toggle_settings_ui, handle_settings_input, update_distance_label));
+            .add_systems(
+                Update,
+                (
+                    toggle_settings_ui,
+                    handle_settings_input,
+                    update_distance_label,
+                    update_screen_count_label,
+                ),
+            );
     }
 }
 
@@ -50,11 +66,20 @@ fn load_settings() -> AppSettings {
     let path = settings_path();
     if let Ok(data) = fs::read_to_string(&path) {
         if let Ok(val) = serde_json::from_str::<serde_json::Value>(&data) {
-            if let Some(d) = val.get("stage_distance").and_then(|v| v.as_f64()) {
-                return AppSettings {
-                    stage_distance: d as f32,
-                };
-            }
+            let stage_distance = val
+                .get("stage_distance")
+                .and_then(|v| v.as_f64())
+                .map(|d| d as f32)
+                .unwrap_or(DEFAULT_STAGE_DISTANCE);
+            let num_screens = val
+                .get("num_screens")
+                .and_then(|v| v.as_u64())
+                .map(|n| (n as u32).clamp(MIN_NUM_SCREENS, MAX_NUM_SCREENS))
+                .unwrap_or(DEFAULT_NUM_SCREENS);
+            return AppSettings {
+                stage_distance,
+                num_screens,
+            };
         }
     }
     AppSettings::default()
@@ -63,6 +88,7 @@ fn load_settings() -> AppSettings {
 fn save_settings(settings: &AppSettings) {
     let val = serde_json::json!({
         "stage_distance": settings.stage_distance,
+        "num_screens": settings.num_screens,
     });
     if let Ok(data) = serde_json::to_string_pretty(&val) {
         let _ = fs::write(settings_path(), data);
@@ -106,7 +132,20 @@ fn spawn_settings_ui(mut commands: Commands, settings: Res<AppSettings>) {
             ));
 
             parent.spawn((
-                Text::new("[Up/Down] adjust | [Tab] close"),
+                Text::new(format!(
+                    "Virtual screens: {} (restart to apply)",
+                    settings.num_screens
+                )),
+                TextFont {
+                    font_size: 16.0,
+                    ..default()
+                },
+                TextColor(Color::srgba(0.9, 0.9, 0.9, 1.0)),
+                ScreenCountLabel,
+            ));
+
+            parent.spawn((
+                Text::new("[Up/Down] distance | [Left/Right] screens | [Tab] close"),
                 TextFont {
                     font_size: 13.0,
                     ..default()
@@ -153,6 +192,14 @@ fn handle_settings_input(
         settings.stage_distance = (settings.stage_distance - DISTANCE_STEP).max(MIN_DISTANCE);
         changed = true;
     }
+    if keyboard.just_pressed(KeyCode::ArrowRight) {
+        settings.num_screens = (settings.num_screens + 1).min(MAX_NUM_SCREENS);
+        changed = true;
+    }
+    if keyboard.just_pressed(KeyCode::ArrowLeft) {
+        settings.num_screens = settings.num_screens.saturating_sub(1).max(MIN_NUM_SCREENS);
+        changed = true;
+    }
 
     if changed {
         for mut transform in &mut screen_transforms {
@@ -169,6 +216,20 @@ fn update_distance_label(
     if settings.is_changed() {
         for mut text in &mut query {
             **text = format!("Distance to stage: {:.1}", settings.stage_distance);
+        }
+    }
+}
+
+fn update_screen_count_label(
+    settings: Res<AppSettings>,
+    mut query: Query<&mut Text, With<ScreenCountLabel>>,
+) {
+    if settings.is_changed() {
+        for mut text in &mut query {
+            **text = format!(
+                "Virtual screens: {} (restart to apply)",
+                settings.num_screens
+            );
         }
     }
 }

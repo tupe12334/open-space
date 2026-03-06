@@ -49,10 +49,6 @@ pub struct VirtualDisplayInfo {
 }
 
 impl VirtualDisplays {
-    pub fn display_ids(&self) -> Vec<u32> {
-        self._displays.iter().map(|d| d.display_id).collect()
-    }
-
     pub fn displays(&self) -> Vec<VirtualDisplayInfo> {
         self._displays
             .iter()
@@ -69,7 +65,12 @@ pub struct VirtualDisplayPlugin;
 
 impl Plugin for VirtualDisplayPlugin {
     fn build(&self, app: &mut App) {
-        let displays = create_virtual_displays(6, 1920, 1080, 60.0);
+        let num_screens = app
+            .world()
+            .get_resource::<crate::settings::AppSettings>()
+            .map(|s| s.num_screens as usize)
+            .unwrap_or(6);
+        let displays = create_virtual_displays(num_screens, 1920, 1080, 60.0);
         app.insert_resource(displays);
     }
 }
@@ -92,10 +93,9 @@ fn create_virtual_displays(
         .expect("CGVirtualDisplayDescriptor class not found");
     let mode_cls =
         AnyClass::get("CGVirtualDisplayMode").expect("CGVirtualDisplayMode class not found");
-    let settings_cls =
-        AnyClass::get("CGVirtualDisplaySettings").expect("CGVirtualDisplaySettings class not found");
-    let display_cls =
-        AnyClass::get("CGVirtualDisplay").expect("CGVirtualDisplay class not found");
+    let settings_cls = AnyClass::get("CGVirtualDisplaySettings")
+        .expect("CGVirtualDisplaySettings class not found");
+    let display_cls = AnyClass::get("CGVirtualDisplay").expect("CGVirtualDisplay class not found");
     let nsarray_cls = AnyClass::get("NSArray").unwrap();
 
     let mut displays = Vec::new();
@@ -118,7 +118,8 @@ fn create_virtual_displays(
             let _: () = msg_send![descriptor, setSizeInMillimeters: size];
 
             // Dispatch queue - dispatch_queue_t is toll-free bridged with NSObject
-            let label = std::ffi::CString::new(format!("com.spatial_display.virtual.{}", i)).unwrap();
+            let label =
+                std::ffi::CString::new(format!("com.spatial_display.virtual.{}", i)).unwrap();
             let queue = dispatch_queue_create(label.as_ptr(), std::ptr::null());
             let queue_obj = queue as *const AnyObject;
             let _: () = msg_send![descriptor, setQueue: queue_obj];
@@ -143,8 +144,7 @@ fn create_virtual_displays(
 
             // Create virtual display with descriptor
             let display: *const AnyObject = msg_send![display_cls, alloc];
-            let display: *const AnyObject =
-                msg_send![display, initWithDescriptor: descriptor];
+            let display: *const AnyObject = msg_send![display, initWithDescriptor: descriptor];
 
             let display_id: u32 = msg_send![display, displayID];
             info!("Virtual display {} created with ID {}", i + 1, display_id);
