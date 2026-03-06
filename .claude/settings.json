@@ -26,8 +26,10 @@
       "WebFetch(domain:api.github.com)",
       "Bash(cargo info:*)",
       "WebFetch(domain:docs.rs)",
-      "Bash(cargo fmt:*)"
-    ]
+      "Bash(cargo fmt:*)",
+      "Bash(grep:*)"
+    ],
+    "deny": ["Bash(gh issue create:*)"]
   },
   "hooks": {
     "PreToolUse": [
