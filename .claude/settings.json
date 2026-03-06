@@ -16,7 +16,8 @@
       "Bash(cargo outdated:*)",
       "Bash(cargo search:*)",
       "Bash(npx centy:*)",
-      "Bash(cargo check:*)"
+      "Bash(cargo check:*)",
+      "Bash(cargo run:*)"
     ]
   },
   "hooks": {
