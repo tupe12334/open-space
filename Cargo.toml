@@ -13,7 +13,7 @@ core-graphics2 = { version = "0.5.2", default-features = false, features = [
   "objc",
   "window",
 ] }
-core-media = { version = "0.5.1", default-features = false, features = [
+core-media = { version = "0.7.1", default-features = false, features = [
   "objc",
 ] }
 core-video = { version = "0.5.2", features = ["objc"] }
