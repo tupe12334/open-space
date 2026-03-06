@@ -11,7 +11,8 @@
       "Bash(npm info:*)",
       "Bash(npm search:*)",
       "Bash(command:*)",
-      "Bash(git status:*)"
+      "Bash(git status:*)",
+      "Bash(pnpm dlx:*)"
     ]
   },
   "hooks": {
