@@ -39,10 +39,14 @@ pub struct ScreenCapturePlugin;
 
 impl Plugin for ScreenCapturePlugin {
     fn build(&self, app: &mut App) {
-        // Pre-allocate 2 channels; unused ones stay empty
+        let num_screens = app
+            .world()
+            .get_resource::<crate::settings::AppSettings>()
+            .map(|s| s.num_screens as usize)
+            .unwrap_or(6);
         let mut senders = Vec::new();
         let mut receivers = Vec::new();
-        for _ in 0..6 {
+        for _ in 0..num_screens {
             let (tx, rx) = mpsc::channel::<Vec<u8>>(60);
             senders.push(Arc::new(tx));
             receivers.push(rx);

@@ -12,18 +12,24 @@ const DEFAULT_STAGE_DISTANCE: f32 = 6.0;
 const DISTANCE_STEP: f32 = 0.5;
 const MIN_DISTANCE: f32 = 1.0;
 const MAX_DISTANCE: f32 = 30.0;
+const DEFAULT_NUM_SCREENS: u32 = 6;
+const MIN_NUM_SCREENS: u32 = 1;
+const MAX_NUM_SCREENS: u32 = 6;
 
 static DISTANCE_STEPS: AtomicI32 = AtomicI32::new(0);
+static SCREEN_STEPS: AtomicI32 = AtomicI32::new(0);
 
 #[derive(Resource, Clone)]
 pub struct AppSettings {
     pub stage_distance: f32,
+    pub num_screens: u32,
 }
 
 impl Default for AppSettings {
     fn default() -> Self {
         Self {
             stage_distance: DEFAULT_STAGE_DISTANCE,
+            num_screens: DEFAULT_NUM_SCREENS,
         }
     }
 }
@@ -51,6 +57,16 @@ declare_class!(
         fn _decrease_distance(&self, _sender: &AnyObject) {
             DISTANCE_STEPS.fetch_add(-1, Ordering::Relaxed);
         }
+
+        #[method(increaseScreens:)]
+        fn _increase_screens(&self, _sender: &AnyObject) {
+            SCREEN_STEPS.fetch_add(1, Ordering::Relaxed);
+        }
+
+        #[method(decreaseScreens:)]
+        fn _decrease_screens(&self, _sender: &AnyObject) {
+            SCREEN_STEPS.fetch_add(-1, Ordering::Relaxed);
+        }
     }
 );
 
@@ -64,7 +80,7 @@ impl MenuHandler {
 #[derive(Resource)]
 struct NativeMenuHandler(#[allow(dead_code)] objc2::rc::Id<MenuHandler>);
 
-// SAFETY: MenuHandler only modifies a global AtomicI32 and is stored
+// SAFETY: MenuHandler only modifies global atomics and is stored
 // solely to prevent deallocation. It is never accessed from Bevy threads.
 unsafe impl Send for NativeMenuHandler {}
 unsafe impl Sync for NativeMenuHandler {}
@@ -76,7 +92,7 @@ impl Plugin for SettingsPlugin {
         let settings = load_settings();
         app.insert_resource(settings)
             .add_systems(Startup, setup_menu_bar)
-            .add_systems(Update, poll_menu_distance);
+            .add_systems(Update, poll_menu_changes);
     }
 }
 
@@ -88,11 +104,20 @@ fn load_settings() -> AppSettings {
     let path = settings_path();
     if let Ok(data) = fs::read_to_string(&path) {
         if let Ok(val) = serde_json::from_str::<serde_json::Value>(&data) {
-            if let Some(d) = val.get("stage_distance").and_then(|v| v.as_f64()) {
-                return AppSettings {
-                    stage_distance: d as f32,
-                };
-            }
+            let stage_distance = val
+                .get("stage_distance")
+                .and_then(|v| v.as_f64())
+                .map(|d| d as f32)
+                .unwrap_or(DEFAULT_STAGE_DISTANCE);
+            let num_screens = val
+                .get("num_screens")
+                .and_then(|v| v.as_u64())
+                .map(|n| (n as u32).clamp(MIN_NUM_SCREENS, MAX_NUM_SCREENS))
+                .unwrap_or(DEFAULT_NUM_SCREENS);
+            return AppSettings {
+                stage_distance,
+                num_screens,
+            };
         }
     }
     AppSettings::default()
@@ -101,6 +126,7 @@ fn load_settings() -> AppSettings {
 fn save_settings(settings: &AppSettings) {
     let val = serde_json::json!({
         "stage_distance": settings.stage_distance,
+        "num_screens": settings.num_screens,
     });
     if let Ok(data) = serde_json::to_string_pretty(&val) {
         let _ = fs::write(settings_path(), data);
@@ -119,10 +145,12 @@ fn setup_menu_bar(mut commands: Commands) {
             return;
         }
 
-        // Create "Distance" submenu
-        let menu_title = NSString::from_str("Distance");
-        let distance_menu: *const AnyObject = msg_send![AnyClass::get("NSMenu").unwrap(), alloc];
-        let distance_menu: *const AnyObject = msg_send![distance_menu, initWithTitle: &*menu_title];
+        // Create "Settings" submenu
+        let menu_title = NSString::from_str("Settings");
+        let settings_menu: *const AnyObject = msg_send![AnyClass::get("NSMenu").unwrap(), alloc];
+        let settings_menu: *const AnyObject = msg_send![settings_menu, initWithTitle: &*menu_title];
+
+        let handler_ptr: *const MenuHandler = &*handler;
 
         // "Increase Distance" menu item
         let inc_title = NSString::from_str("Increase Distance");
@@ -135,9 +163,8 @@ fn setup_menu_bar(mut commands: Commands) {
             action: sel!(increaseDistance:),
             keyEquivalent: &*inc_key
         ];
-        let handler_ptr: *const MenuHandler = &*handler;
         let _: () = msg_send![increase_item, setTarget: handler_ptr];
-        let _: () = msg_send![distance_menu, addItem: increase_item];
+        let _: () = msg_send![settings_menu, addItem: increase_item];
 
         // "Decrease Distance" menu item
         let dec_title = NSString::from_str("Decrease Distance");
@@ -151,33 +178,76 @@ fn setup_menu_bar(mut commands: Commands) {
             keyEquivalent: &*dec_key
         ];
         let _: () = msg_send![decrease_item, setTarget: handler_ptr];
-        let _: () = msg_send![distance_menu, addItem: decrease_item];
+        let _: () = msg_send![settings_menu, addItem: decrease_item];
+
+        // Separator
+        let separator: *const AnyObject =
+            msg_send![AnyClass::get("NSMenuItem").unwrap(), separatorItem];
+        let _: () = msg_send![settings_menu, addItem: separator];
+
+        // "More Screens" menu item
+        let more_title = NSString::from_str("More Screens (restart to apply)");
+        let more_key = NSString::from_str("]");
+        let more_item: *const AnyObject = msg_send![AnyClass::get("NSMenuItem").unwrap(), alloc];
+        let more_item: *const AnyObject = msg_send![
+            more_item,
+            initWithTitle: &*more_title,
+            action: sel!(increaseScreens:),
+            keyEquivalent: &*more_key
+        ];
+        let _: () = msg_send![more_item, setTarget: handler_ptr];
+        let _: () = msg_send![settings_menu, addItem: more_item];
+
+        // "Fewer Screens" menu item
+        let fewer_title = NSString::from_str("Fewer Screens (restart to apply)");
+        let fewer_key = NSString::from_str("[");
+        let fewer_item: *const AnyObject = msg_send![AnyClass::get("NSMenuItem").unwrap(), alloc];
+        let fewer_item: *const AnyObject = msg_send![
+            fewer_item,
+            initWithTitle: &*fewer_title,
+            action: sel!(decreaseScreens:),
+            keyEquivalent: &*fewer_key
+        ];
+        let _: () = msg_send![fewer_item, setTarget: handler_ptr];
+        let _: () = msg_send![settings_menu, addItem: fewer_item];
 
         // Create top-level menu bar item and attach submenu
-        let item_title = NSString::from_str("Distance");
+        let item_title = NSString::from_str("Settings");
         let menu_item: *const AnyObject = msg_send![AnyClass::get("NSMenuItem").unwrap(), new];
         let _: () = msg_send![menu_item, setTitle: &*item_title];
-        let _: () = msg_send![menu_item, setSubmenu: distance_menu];
+        let _: () = msg_send![menu_item, setSubmenu: settings_menu];
         let _: () = msg_send![main_menu, addItem: menu_item];
     }
 
     commands.insert_resource(NativeMenuHandler(handler));
 }
 
-fn poll_menu_distance(
+fn poll_menu_changes(
     mut settings: ResMut<AppSettings>,
     mut screen_transforms: Query<&mut Transform, With<crate::stage::ScreenMarker>>,
 ) {
-    let steps = DISTANCE_STEPS.swap(0, Ordering::Relaxed);
-    if steps == 0 {
+    let dist_steps = DISTANCE_STEPS.swap(0, Ordering::Relaxed);
+    let scr_steps = SCREEN_STEPS.swap(0, Ordering::Relaxed);
+
+    if dist_steps == 0 && scr_steps == 0 {
         return;
     }
 
-    let delta = steps as f32 * DISTANCE_STEP;
-    settings.stage_distance = (settings.stage_distance + delta).clamp(MIN_DISTANCE, MAX_DISTANCE);
+    if dist_steps != 0 {
+        let delta = dist_steps as f32 * DISTANCE_STEP;
+        settings.stage_distance =
+            (settings.stage_distance + delta).clamp(MIN_DISTANCE, MAX_DISTANCE);
 
-    for mut transform in &mut screen_transforms {
-        transform.translation.z = -settings.stage_distance;
+        for mut transform in &mut screen_transforms {
+            transform.translation.z = -settings.stage_distance;
+        }
     }
+
+    if scr_steps != 0 {
+        let new_count = (settings.num_screens as i32 + scr_steps)
+            .clamp(MIN_NUM_SCREENS as i32, MAX_NUM_SCREENS as i32) as u32;
+        settings.num_screens = new_count;
+    }
+
     save_settings(&settings);
 }

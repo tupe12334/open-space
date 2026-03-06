@@ -152,8 +152,6 @@ fn spawn_screen(
 
     let mut screen_handles: Vec<Handle<Image>> = Vec::new();
     let mut display_ids: Vec<u32> = Vec::new();
-    let _total = screen_specs.len();
-
     for (i, &(display_id, width, height)) in screen_specs.iter().enumerate() {
         let mut screen_texture = Image::new(
             Extent3d {

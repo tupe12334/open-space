@@ -1,4 +1,5 @@
 use bevy::prelude::*;
+use core_graphics2::display::CGDisplay;
 use objc2::ffi;
 use objc2::msg_send;
 use objc2::runtime::{AnyClass, AnyObject};
@@ -70,7 +71,12 @@ pub struct VirtualDisplayPlugin;
 
 impl Plugin for VirtualDisplayPlugin {
     fn build(&self, app: &mut App) {
-        let displays = create_virtual_displays(6, 1920, 1080, 60.0);
+        let num_screens = app
+            .world()
+            .get_resource::<crate::settings::AppSettings>()
+            .map(|s| s.num_screens as usize)
+            .unwrap_or(6);
+        let displays = create_virtual_displays(num_screens, 1920, 1080, 60.0);
         app.insert_resource(displays);
     }
 }
@@ -183,6 +189,33 @@ fn create_virtual_displays(
         displays.len(),
         displays.iter().map(|d| d.display_id).collect::<Vec<_>>()
     );
+
+    // Poll until macOS has registered display modes for every virtual display.
+    // CGDisplayCopyAllDisplayModes returns NULL until the modes are ready;
+    // winit will panic if it enumerates monitors before that happens.
+    if !displays.is_empty() {
+        let timeout = std::time::Duration::from_secs(5);
+        let poll_interval = std::time::Duration::from_millis(50);
+        let start = std::time::Instant::now();
+
+        for vd in &displays {
+            let cg = CGDisplay::new(vd.display_id);
+            loop {
+                if cg.copy_display_modes().is_some() {
+                    break;
+                }
+                if start.elapsed() > timeout {
+                    warn!(
+                        "Timed out waiting for display modes on virtual display {} (ID {})",
+                        vd.display_id, vd.display_id
+                    );
+                    break;
+                }
+                std::thread::sleep(poll_interval);
+            }
+        }
+        info!("Virtual display modes ready after {:.0?}", start.elapsed());
+    }
 
     VirtualDisplays {
         _displays: displays,
