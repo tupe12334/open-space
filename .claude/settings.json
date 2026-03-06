@@ -2,7 +2,9 @@
   "permissions": {
     "allow": [
       "Bash(centy:*)",
-      "Bash(centy create:*)"
+      "Bash(centy create:*)",
+      "Bash(git push:*)",
+      "Bash(uuidgen:*)"
     ]
   }
 }
