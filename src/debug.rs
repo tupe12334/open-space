@@ -12,7 +12,10 @@ impl Plugin for DebugPlugin {
         app
             // .add_systems(Update, print_position)
             // .add_systems(Update, check_asset_handles)
-            .add_plugins((FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin::default()));
+            .add_plugins((
+                FrameTimeDiagnosticsPlugin::default(),
+                LogDiagnosticsPlugin::default(),
+            ));
     }
 }
 

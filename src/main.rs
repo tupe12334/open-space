@@ -26,10 +26,6 @@ pub struct ScaleFactor {
 
 fn main() {
     App::new()
-        .insert_resource(AmbientLight {
-            color: Color::default(),
-            brightness: 100.0,
-        })
         .insert_resource(ScaleFactor { value: 1.0 })
         .add_plugins(DefaultPlugins.set(WindowPlugin {
             primary_window: Some(Window {

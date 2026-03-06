@@ -346,7 +346,7 @@ fn update_screen_texture(
     for i in 0..count {
         if let Ok(frame_data) = frame_channel.receivers[i].try_recv() {
             if let Some(image) = images.get_mut(&asset_handles.screens[i]) {
-                image.data = frame_data;
+                image.data = Some(frame_data);
             }
         }
     }
