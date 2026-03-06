@@ -20,13 +20,15 @@ impl Plugin for HmdPlugin {
         app.insert_resource(GlassesOrientation {
             quat: orientation.clone(),
         });
-        // Spawn a background thread to read IMU data from the glasses
         std::thread::spawn(move || {
             tracking_thread(orientation);
         });
         app.add_systems(FixedUpdate, apply_glasses_orientation);
     }
 }
+
+/// Number of IMU samples to let the Madgwick filter stabilize before capturing the reference.
+const WARMUP_SAMPLES: u32 = 500;
 
 fn tracking_thread(orientation: Arc<Mutex<Quat>>) {
     let glasses = ar_drivers::any_glasses();
@@ -46,6 +48,8 @@ fn tracking_thread(orientation: Arc<Mutex<Quat>>) {
 
     // Madgwick filter: sample_period ~1ms (1000Hz polling), beta = 0.1
     let mut ahrs = Madgwick::new(1.0 / 1000.0, 0.1);
+    let mut sample_count: u32 = 0;
+    let mut reference_quat: Option<nalgebra::UnitQuaternion<f64>> = None;
 
     loop {
         match glasses.read_event() {
@@ -62,13 +66,30 @@ fn tracking_thread(orientation: Arc<Mutex<Quat>>) {
                 );
 
                 if let Ok(q) = ahrs.update_imu(&gyro, &accel) {
-                    let bevy_quat = Quat::from_xyzw(q.i as f32, q.j as f32, q.k as f32, q.w as f32);
-                    if let Ok(mut lock) = orientation.lock() {
-                        *lock = bevy_quat;
+                    sample_count = sample_count.saturating_add(1);
+
+                    // Capture reference orientation after warm-up
+                    if sample_count == WARMUP_SAMPLES {
+                        reference_quat = Some(*q);
+                        info!("Head tracking calibrated");
+                    }
+
+                    if let Some(ref ref_q) = reference_quat {
+                        // Relative rotation: how much the head has rotated since calibration
+                        let relative = ref_q.inverse() * q;
+                        let bevy_quat = Quat::from_xyzw(
+                            relative.i as f32,
+                            relative.j as f32,
+                            relative.k as f32,
+                            relative.w as f32,
+                        );
+                        if let Ok(mut lock) = orientation.lock() {
+                            *lock = bevy_quat;
+                        }
                     }
                 }
             }
-            Ok(_) => {} // Ignore other events (magnetometer, keypress, etc.)
+            Ok(_) => {}
             Err(e) => {
                 error!("Glasses read error: {}. Stopping tracking.", e);
                 return;
