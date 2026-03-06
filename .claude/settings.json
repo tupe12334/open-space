@@ -27,7 +27,8 @@
       "Bash(cargo info:*)",
       "WebFetch(domain:docs.rs)",
       "Bash(cargo fmt:*)"
-    ]
+    ],
+    "deny": ["Bash(gh issue create:*)"]
   },
   "hooks": {
     "PreToolUse": [
