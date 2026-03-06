@@ -1723,9 +1723,9 @@ dependencies = [
 
 [[package]]
 name = "core-audio-types"
-version = "0.1.6"
+version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d90e18dff9f1382fdbec9507f11d896829a3d32d82676fe8e79635321402c148"
+checksum = "d2b5354d2dd3c98fe23ddceaf4a2a4d38756b72c950d8b71298c57af5bc1e293"
 dependencies = [
  "cfg-if",
  "core-foundation-sys",
@@ -1784,9 +1784,9 @@ dependencies = [
 
 [[package]]
 name = "core-graphics2"
-version = "0.4.1"
+version = "0.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7e4583956b9806b69f73fcb23aee05eb3620efc282972f08f6a6db7504f8334d"
+checksum = "4416167a69126e617f8d0a214af0e3c1dbdeffcb100ddf72dcd1a1ac9893c146"
 dependencies = [
  "bitflags 2.6.0",
  "block",
@@ -1798,9 +1798,9 @@ dependencies = [
 
 [[package]]
 name = "core-media"
-version = "0.5.1"
+version = "0.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "735c25a66449364e6850ac0e27e45d5b13c6e6fe6f44a2f96cbff2d9d29447e3"
+checksum = "32472110b234059f80a051526122cfd274661acf0ff932a2f18c70a570a10402"
 dependencies = [
  "block",
  "cfg-if",
@@ -1814,9 +1814,9 @@ dependencies = [
 
 [[package]]
 name = "core-video"
-version = "0.4.3"
+version = "0.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d45e71d5be22206bed53c3c3cb99315fc4c3d31b8963808c6bc4538168c4f8ef"
+checksum = "139679cc63eb9504bdbe37e37874b0247136177655f0008588781e90863afa62"
 dependencies = [
  "block",
  "core-foundation 0.10.0",
@@ -4254,9 +4254,9 @@ checksum = "94143f37725109f92c262ed2cf5e59bce7498c01bcc1502d7b9afe439a4e9f49"
 
 [[package]]
 name = "screen-capture-kit"
-version = "0.3.1"
+version = "0.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e3da365034668811518d19b330f2b35f8517f948fe01ef48726688c0536d1d0e"
+checksum = "ba0a56fa0d4338e36315518e126b8c9941f6979058888976e5ef4b84f0668661"
 dependencies = [
  "block2",
  "core-foundation 0.10.0",
