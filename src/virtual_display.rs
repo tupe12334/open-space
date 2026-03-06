@@ -1,4 +1,5 @@
 use bevy::prelude::*;
+use core_graphics2::display::CGDisplay;
 use objc2::ffi;
 use objc2::msg_send;
 use objc2::runtime::{AnyClass, AnyObject};
@@ -189,11 +190,31 @@ fn create_virtual_displays(
         displays.iter().map(|d| d.display_id).collect::<Vec<_>>()
     );
 
-    // Give macOS time to fully register the virtual display modes.
-    // Without this, CGDisplayCopyAllDisplayModes may return NULL for these
-    // displays, causing winit to panic when enumerating monitors.
+    // Poll until macOS has registered display modes for every virtual display.
+    // CGDisplayCopyAllDisplayModes returns NULL until the modes are ready;
+    // winit will panic if it enumerates monitors before that happens.
     if !displays.is_empty() {
-        std::thread::sleep(std::time::Duration::from_millis(500));
+        let timeout = std::time::Duration::from_secs(5);
+        let poll_interval = std::time::Duration::from_millis(50);
+        let start = std::time::Instant::now();
+
+        for vd in &displays {
+            let cg = CGDisplay::new(vd.display_id);
+            loop {
+                if cg.copy_display_modes().is_some() {
+                    break;
+                }
+                if start.elapsed() > timeout {
+                    warn!(
+                        "Timed out waiting for display modes on virtual display {} (ID {})",
+                        vd.display_id, vd.display_id
+                    );
+                    break;
+                }
+                std::thread::sleep(poll_interval);
+            }
+        }
+        info!("Virtual display modes ready after {:.0?}", start.elapsed());
     }
 
     VirtualDisplays {
