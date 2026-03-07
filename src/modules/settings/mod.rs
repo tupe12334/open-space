@@ -26,6 +26,7 @@ pub(crate) static CENTER_STAGE: AtomicBool = AtomicBool::new(false);
 pub(crate) struct AppSettings {
     pub(crate) stage_distance: f32,
     pub(crate) num_screens: u32,
+    pub(crate) glasses_monitor_name: Option<String>,
 }
 
 impl Default for AppSettings {
@@ -33,6 +34,7 @@ impl Default for AppSettings {
         Self {
             stage_distance: DEFAULT_STAGE_DISTANCE,
             num_screens: DEFAULT_NUM_SCREENS,
+            glasses_monitor_name: None,
         }
     }
 }

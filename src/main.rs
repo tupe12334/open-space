@@ -74,9 +74,6 @@ fn main() {
                 visible: true,
                 // window_level: WindowLevel::AlwaysOnTop,
                 mode: WindowMode::Windowed,
-                // mode: WindowMode::Fullscreen(MonitorSelection::Index(1)),
-                // position: WindowPosition::Centered(MonitorSelection::Index(1)), // 0 is primary, 1 is secondary
-                // mode: WindowMode::Windowed,
                 ..default()
             }),
             ..default()

@@ -1,4 +1,5 @@
 use bevy::prelude::*;
+use bevy::window::{Monitor, MonitorSelection, PrimaryMonitor, PrimaryWindow, WindowMode};
 use std::sync::atomic::Ordering;
 
 use super::{
@@ -37,4 +38,50 @@ pub(super) fn poll_menu_changes(
     }
 
     save_settings(&settings);
+}
+
+pub(super) fn select_glasses_fullscreen(
+    settings: Res<AppSettings>,
+    monitors: Query<(Entity, &Monitor, Option<&PrimaryMonitor>)>,
+    mut windows: Query<&mut Window, With<PrimaryWindow>>,
+) {
+    let Ok(mut window) = windows.single_mut() else {
+        return;
+    };
+
+    let glasses_entity = settings.glasses_monitor_name.as_ref().map_or_else(
+        || {
+            monitors
+                .iter()
+                .find(|(_, _, primary)| primary.is_none())
+                .map(|(entity, _, _)| entity)
+        },
+        |name_filter| {
+            let filter_lower = name_filter.to_lowercase();
+            monitors
+                .iter()
+                .find(|(_, monitor, _)| {
+                    monitor
+                        .name
+                        .as_ref()
+                        .is_some_and(|n| n.to_lowercase().contains(&filter_lower))
+                })
+                .map(|(entity, _, _)| entity)
+        },
+    );
+
+    match glasses_entity {
+        Some(entity) => {
+            let name = monitors
+                .get(entity)
+                .ok()
+                .and_then(|(_, m, _)| m.name.clone())
+                .unwrap_or_else(|| "unknown".into());
+            info!("Switching to fullscreen on glasses monitor: {name}");
+            window.mode = WindowMode::BorderlessFullscreen(MonitorSelection::Entity(entity));
+        }
+        None => {
+            warn!("No glasses monitor found; staying windowed");
+        }
+    }
 }

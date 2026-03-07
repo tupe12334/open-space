@@ -24,9 +24,14 @@ pub(crate) fn load_settings() -> AppSettings {
                 .map_or(DEFAULT_NUM_SCREENS, |n| {
                     (n as u32).clamp(MIN_NUM_SCREENS, MAX_NUM_SCREENS)
                 });
+            let glasses_monitor_name = val
+                .get("glasses_monitor_name")
+                .and_then(serde_json::Value::as_str)
+                .map(String::from);
             return AppSettings {
                 stage_distance,
                 num_screens,
+                glasses_monitor_name,
             };
         }
     }
@@ -34,10 +39,13 @@ pub(crate) fn load_settings() -> AppSettings {
 }
 
 pub(super) fn save_settings(settings: &AppSettings) {
-    let val = serde_json::json!({
+    let mut val = serde_json::json!({
         "stage_distance": settings.stage_distance,
         "num_screens": settings.num_screens,
     });
+    if let Some(name) = &settings.glasses_monitor_name {
+        val["glasses_monitor_name"] = serde_json::json!(name);
+    }
     if let Ok(data) = serde_json::to_string_pretty(&val) {
         if let Err(e) = fs::write(settings_path(), data) {
             eprintln!("Failed to write settings: {e}");
