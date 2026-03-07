@@ -12,7 +12,7 @@ use objc2::mutability;
 use objc2::{
     declare_class, msg_send_id,
     rc::{Allocated, Id},
-    runtime::ProtocolObject,
+    runtime::{AnyObject, ProtocolObject},
     ClassType, DeclaredClass,
 };
 use objc2_foundation::{NSArray, NSError, NSObject, NSObjectProtocol};
@@ -328,12 +328,9 @@ fn setup_screen_capture(
                 DispatchQueueAttr::SERIAL,
             );
             let output: &ProtocolObject<dyn SCStreamOutput> = ProtocolObject::from_ref(&*delegate);
-            // Use msg_send! directly because screen-capture-kit depends on dispatch2 0.1
-            // which has a different Queue type than dispatch2 0.3.1's DispatchQueue.
-            // Both wrap the same underlying dispatch_queue_t, so passing the raw pointer is safe.
             let add_result: Result<bool, Id<NSError>> = {
                 let mut error: *mut NSError = std::ptr::null_mut();
-                let raw_queue = queue.as_raw().as_ptr().cast::<std::ffi::c_void>();
+                let raw_queue = queue.as_raw().as_ptr().cast::<AnyObject>();
                 let result: bool = unsafe {
                     objc2::msg_send![
                         &*stream,

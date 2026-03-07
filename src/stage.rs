@@ -173,9 +173,8 @@ fn spawn_screen(
             RenderAssetUsages::default(),
         );
 
-        screen_texture.texture_descriptor.usage = TextureUsages::COPY_DST
-            | TextureUsages::TEXTURE_BINDING
-            | TextureUsages::STORAGE_BINDING;
+        screen_texture.texture_descriptor.usage =
+            TextureUsages::COPY_DST | TextureUsages::TEXTURE_BINDING;
 
         let texture_handle = images.add(screen_texture);
         screen_handles.push(texture_handle.clone());

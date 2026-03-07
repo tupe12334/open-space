@@ -84,10 +84,8 @@ impl MenuHandler {
 }
 
 #[derive(Resource)]
-struct NativeMenuHandler(
-    #[expect(dead_code, reason = "stored to prevent deallocation, never read")]
-    objc2::rc::Id<MenuHandler>,
-);
+#[expect(dead_code, reason = "menu bar setup temporarily disabled")]
+struct NativeMenuHandler(objc2::rc::Id<MenuHandler>);
 
 // SAFETY: MenuHandler only modifies global atomics and is stored
 // solely to prevent deallocation. It is never accessed from Bevy threads.
@@ -98,9 +96,9 @@ pub(crate) struct SettingsPlugin;
 
 impl Plugin for SettingsPlugin {
     fn build(&self, app: &mut App) {
-        // AppSettings resource is inserted by main() before App::new().
-        app.add_systems(Startup, setup_menu_bar)
-            .add_systems(Update, poll_menu_changes);
+        // NOTE: setup_menu_bar is disabled because modifying NSApplication's
+        // menu from inside a Bevy Startup system deadlocks the winit event loop.
+        app.add_systems(Update, poll_menu_changes);
     }
 }
 
@@ -143,6 +141,7 @@ fn save_settings(settings: &AppSettings) {
     }
 }
 
+#[expect(dead_code, reason = "menu bar setup temporarily disabled")]
 fn setup_menu_bar(mut commands: Commands) {
     let handler = MenuHandler::new();
 
