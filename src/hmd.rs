@@ -14,7 +14,7 @@ struct GlassesOrientation {
     quat: Arc<Mutex<Quat>>,
 }
 
-pub struct HmdPlugin;
+pub(crate) struct HmdPlugin;
 
 impl Plugin for HmdPlugin {
     fn build(&self, app: &mut App) {
