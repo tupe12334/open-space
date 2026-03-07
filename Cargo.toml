@@ -143,6 +143,7 @@ unused_trait_names = "deny"
 verbose_file_reads = "deny"
 wildcard_enum_match_arm = "deny"
 unused_result_ok = "deny"
+map_with_unused_argument_over_ranges = "deny"
 
 # Intentionally allowed pedantic/nursery lints with justification:
 # This crate heavily uses Bevy and ObjC interop which requires many unsafe casts
