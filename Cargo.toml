@@ -101,6 +101,7 @@ map_err_ignore = "deny"
 renamed_function_params = "deny"
 deref_by_slicing = "deny"
 large_include_file = "deny"
+multiple_inherent_impl = "deny"
 
 # Intentionally allowed pedantic/nursery lints with justification:
 # This crate heavily uses Bevy and ObjC interop which requires many unsafe casts
