@@ -115,7 +115,7 @@ fn tracking_thread(orientation: Arc<Mutex<Quat>>) {
                         info!("Center stage: head tracking reference reset");
                     }
 
-                    if let Some(ref ref_q) = reference_quat {
+                    if let Some(ref_q) = &reference_quat {
                         // Relative rotation: how much the head has rotated since calibration
                         let relative = ref_q.inverse() * q;
                         let bevy_quat = Quat::from_xyzw(

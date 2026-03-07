@@ -114,6 +114,7 @@ unnecessary_safety_comment = "deny"
 unnecessary_safety_doc = "deny"
 partial_pub_fields = "deny"
 as_underscore = "deny"
+ref_patterns = "deny"
 filetype_is_file = "deny"
 
 # Intentionally allowed pedantic/nursery lints with justification:
