@@ -3,8 +3,16 @@ use std::sync::Arc;
 use ar_drivers::{any_glasses, GlassesEvent};
 
 use bevy::prelude::*;
+use dcmimu::DCMIMU;
 
 use super::types::{CalibrationOffset, ImuStore};
+
+/// Number of IMU samples to average for gyro bias estimation.
+const BIAS_SAMPLES: u32 = 1000;
+
+/// Extra samples after DCMIMU reset to let pitch/roll reconverge before
+/// capturing the calibration offset.
+const CONVERGENCE_SAMPLES: u32 = 500;
 
 /// Initializes HMD (Head-Mounted Display) motion tracking in a separate thread
 ///
@@ -12,18 +20,16 @@ use super::types::{CalibrationOffset, ImuStore};
 /// * `imu_store` - Resource containing shared DCMIMU state for orientation tracking
 ///
 /// # Details
-/// This function:
-/// 1. Spawns a dedicated thread for processing IMU (Inertial Measurement Unit) data
-/// 2. Continuously reads accelerometer and gyroscope data from the glasses
-/// 3. Updates the shared DCMIMU state with new motion data
-/// 4. Calculates time delta between measurements for accurate integration
+/// Calibration has two phases:
+/// 1. **Bias estimation** (first `BIAS_SAMPLES`): raw gyro readings are averaged
+///    to compute a per-axis bias while the filter runs on raw data.
+/// 2. **Reconvergence** (next `CONVERGENCE_SAMPLES`): the DCMIMU is reset and fed
+///    bias-corrected data so its internal state starts clean. Pitch/roll reconverge
+///    from accelerometer; yaw starts at 0 with near-zero bias input.
 ///
-/// The motion data is used to update camera orientation in the main rendering thread.
-/// Number of IMU samples to process before capturing the calibration offset.
-/// This gives the DCMIMU filter time to converge on a stable orientation.
-const CALIBRATION_SAMPLES: u32 = 1000;
-
-pub(in crate::modules::hmd) fn start_tracking(imu_store: Res<ImuStore>) {
+/// After both phases complete, the current orientation is captured as the
+/// calibration offset (the "forward" direction).
+pub(crate) fn start_tracking(imu_store: Res<ImuStore>) {
     let shared_dcmimu_clone = Arc::clone(&imu_store.dcmimu);
     let calibration_clone = Arc::clone(&imu_store.calibration);
 
@@ -74,8 +80,8 @@ pub(in crate::modules::hmd) fn start_tracking(imu_store: Res<ImuStore>) {
 
                     sample_count += 1;
 
-                    // Capture calibration offset once the filter has stabilized
-                    if sample_count == CALIBRATION_SAMPLES {
+                    if sample_count == BIAS_SAMPLES {
+                        // Phase 1 complete: compute gyro bias and reset the filter
                         let count = sample_count as f64;
                         let bias = (
                             (gyro_sum_x / count) as f32,
@@ -84,6 +90,18 @@ pub(in crate::modules::hmd) fn start_tracking(imu_store: Res<ImuStore>) {
                         );
                         gyro_bias = Some(bias);
 
+                        // Reset DCMIMU so its internal bias estimates (x3-x5)
+                        // start at zero, matching the now-corrected gyro input.
+                        *dcmimu = DCMIMU::new();
+
+                        info!(
+                            "Gyro bias estimated after {BIAS_SAMPLES} samples \
+                             (x={:.6}, y={:.6}, z={:.6} rad/s), \
+                             DCMIMU reset for reconvergence",
+                            bias.0, bias.1, bias.2
+                        );
+                    } else if sample_count == BIAS_SAMPLES + CONVERGENCE_SAMPLES {
+                        // Phase 2 complete: filter has reconverged with clean data
                         let orientation = dcmimu.all();
                         drop(dcmimu);
                         *calibration_clone.lock().unwrap() = Some(CalibrationOffset {
@@ -92,9 +110,8 @@ pub(in crate::modules::hmd) fn start_tracking(imu_store: Res<ImuStore>) {
                             roll: orientation.roll,
                         });
                         info!(
-                            "IMU calibration captured after {CALIBRATION_SAMPLES} samples \
-                             (gyro bias: x={:.6}, y={:.6}, z={:.6} rad/s)",
-                            bias.0, bias.1, bias.2
+                            "IMU calibration captured after {} total samples",
+                            BIAS_SAMPLES + CONVERGENCE_SAMPLES
                         );
                     }
                 }

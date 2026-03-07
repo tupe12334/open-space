@@ -13,7 +13,7 @@ use super::types::ImuStore;
 /// and applies it to all camera entities in the scene.
 ///
 /// The rotation order is YXZ (yaw, roll inverted, pitch) to match the IMU coordinate system.
-pub(in crate::modules::hmd) fn update_camera_orientation(
+pub(crate) fn update_camera_orientation(
     mut query: Query<&mut Transform, With<Camera>>,
     state: Res<ImuStore>,
 ) {
