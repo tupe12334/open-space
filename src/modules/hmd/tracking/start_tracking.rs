@@ -1,24 +1,10 @@
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 use ar_drivers::{any_glasses, GlassesEvent};
 
 use bevy::prelude::*;
-use dcmimu::DCMIMU;
 
-/// Stores the initial IMU orientation captured at startup, used to zero-out
-/// the camera so "wherever you look when the app starts" becomes forward.
-#[derive(Clone, Copy)]
-pub(super) struct CalibrationOffset {
-    pub(super) yaw: f32,
-    pub(super) pitch: f32,
-    pub(super) roll: f32,
-}
-
-#[derive(Resource)]
-pub(super) struct ImuStore {
-    pub(super) dcmimu: Arc<Mutex<DCMIMU>>,
-    pub(super) calibration: Arc<Mutex<Option<CalibrationOffset>>>,
-}
+use super::types::{CalibrationOffset, ImuStore};
 
 /// Initializes HMD (Head-Mounted Display) motion tracking in a separate thread
 ///
@@ -37,7 +23,7 @@ pub(super) struct ImuStore {
 /// This gives the DCMIMU filter time to converge on a stable orientation.
 const CALIBRATION_SAMPLES: u32 = 1000;
 
-pub(super) fn start_tracking(imu_store: Res<ImuStore>) {
+pub(in crate::modules::hmd) fn start_tracking(imu_store: Res<ImuStore>) {
     let shared_dcmimu_clone = Arc::clone(&imu_store.dcmimu);
     let calibration_clone = Arc::clone(&imu_store.calibration);
 
@@ -117,37 +103,4 @@ pub(super) fn start_tracking(imu_store: Res<ImuStore>) {
             }
         }
     });
-}
-
-/// Updates camera orientation based on HMD/glasses IMU data
-///
-/// # Arguments
-/// * `query` - Query for all camera transforms that need updating
-/// * `state` - Shared state containing IMU orientation data
-///
-/// # Details
-/// Converts IMU orientation (yaw, pitch, roll) into a quaternion rotation
-/// and applies it to all camera entities in the scene.
-///
-/// The rotation order is YXZ (yaw, roll inverted, pitch) to match the IMU coordinate system.
-pub(super) fn update_camera_orientation(
-    mut query: Query<&mut Transform, With<Camera>>,
-    state: Res<ImuStore>,
-) {
-    let Some(cal) = *state.calibration.lock().unwrap() else {
-        return; // Not calibrated yet — keep the default camera orientation
-    };
-
-    let dcm = state.dcmimu.lock().unwrap().all();
-
-    let rot = Transform::from_rotation(Quat::from_euler(
-        EulerRot::YXZ,
-        dcm.yaw - cal.yaw,        // left-right
-        dcm.roll - cal.roll,      // up-down
-        -(dcm.pitch - cal.pitch), // tilt right-left
-    ));
-
-    for mut transform in &mut query {
-        transform.rotation = rot.rotation;
-    }
 }
