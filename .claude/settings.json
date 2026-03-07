@@ -35,7 +35,8 @@
       "Bash(cargo clippy:*)",
       "Bash(cargo test:*)",
       "Bash(gh repo:*)",
-      "Bash(gh label:*)"
+      "Bash(gh label:*)",
+      "Bash(cargo doc:*)"
     ],
     "deny": ["Bash(gh issue create:*)"]
   },
