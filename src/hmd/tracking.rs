@@ -118,7 +118,7 @@ pub(super) fn update_camera_orientation(
     let rot = Transform::from_rotation(Quat::from_euler(
         EulerRot::YXZ,
         dcm.yaw - cal.yaw,
-        -(dcm.roll - cal.roll),
+        dcm.roll - cal.roll,
         -(dcm.pitch - cal.pitch),
     ));
 
