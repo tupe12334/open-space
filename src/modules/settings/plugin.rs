@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use super::poll_menu_changes;
+use super::systems::poll_menu_changes;
 
 pub(crate) struct SettingsPlugin;
 
