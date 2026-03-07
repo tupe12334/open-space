@@ -35,24 +35,24 @@ struct VirtualDisplay {
 
 /// Resource that keeps virtual displays alive for the lifetime of the app.
 #[derive(Resource, Default)]
-pub struct VirtualDisplays {
+pub(crate) struct VirtualDisplays {
     displays: Vec<VirtualDisplay>,
 }
 
 /// Info about a single virtual display.
-pub struct VirtualDisplayInfo {
-    pub display_id: u32,
-    pub width: u32,
-    pub height: u32,
+pub(crate) struct VirtualDisplayInfo {
+    pub(crate) display_id: u32,
+    pub(crate) width: u32,
+    pub(crate) height: u32,
 }
 
 impl VirtualDisplays {
     #[expect(dead_code, reason = "public API reserved for future use")]
-    pub fn display_ids(&self) -> Vec<u32> {
+    pub(crate) fn display_ids(&self) -> Vec<u32> {
         self.displays.iter().map(|d| d.display_id).collect()
     }
 
-    pub fn displays(&self) -> Vec<VirtualDisplayInfo> {
+    pub(crate) fn displays(&self) -> Vec<VirtualDisplayInfo> {
         self.displays
             .iter()
             .map(|d| VirtualDisplayInfo {
@@ -64,7 +64,7 @@ impl VirtualDisplays {
     }
 }
 
-pub struct VirtualDisplayPlugin;
+pub(crate) struct VirtualDisplayPlugin;
 
 impl Plugin for VirtualDisplayPlugin {
     fn build(&self, app: &mut App) {

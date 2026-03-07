@@ -18,12 +18,12 @@ const MAX_NUM_SCREENS: u32 = 6;
 
 static DISTANCE_STEPS: AtomicI32 = AtomicI32::new(0);
 static SCREEN_STEPS: AtomicI32 = AtomicI32::new(0);
-pub static CENTER_STAGE: AtomicBool = AtomicBool::new(false);
+pub(crate) static CENTER_STAGE: AtomicBool = AtomicBool::new(false);
 
 #[derive(Resource, Clone)]
-pub struct AppSettings {
-    pub stage_distance: f32,
-    pub num_screens: u32,
+pub(crate) struct AppSettings {
+    pub(crate) stage_distance: f32,
+    pub(crate) num_screens: u32,
 }
 
 impl Default for AppSettings {
@@ -94,7 +94,7 @@ struct NativeMenuHandler(
 unsafe impl Send for NativeMenuHandler {}
 unsafe impl Sync for NativeMenuHandler {}
 
-pub struct SettingsPlugin;
+pub(crate) struct SettingsPlugin;
 
 impl Plugin for SettingsPlugin {
     fn build(&self, app: &mut App) {
@@ -108,7 +108,7 @@ fn settings_path() -> PathBuf {
     PathBuf::from(SETTINGS_FILE)
 }
 
-pub fn load_settings() -> AppSettings {
+pub(crate) fn load_settings() -> AppSettings {
     let path = settings_path();
     if let Ok(data) = fs::read_to_string(&path) {
         if let Ok(val) = serde_json::from_str::<serde_json::Value>(&data) {

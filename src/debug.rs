@@ -7,7 +7,7 @@ use bevy::{
 use crate::camera::MainCamera;
 use crate::stage::ScreenMarker;
 
-pub struct DebugPlugin;
+pub(crate) struct DebugPlugin;
 
 #[derive(Resource)]
 struct DebugTimer(Timer);

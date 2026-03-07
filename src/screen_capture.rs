@@ -36,7 +36,7 @@ extern "C" {
 
 /// Check and request screen recording permission before the event loop starts.
 /// Must be called from `main()` before `App::new()` to avoid blocking the event loop.
-pub fn ensure_screen_capture_permission() {
+pub(crate) fn ensure_screen_capture_permission() {
     let has_permission = unsafe { CGPreflightScreenCaptureAccess() };
     if has_permission {
         eprintln!("Screen recording permission granted");
@@ -59,7 +59,7 @@ struct FrameChannel {
     receivers: Vec<Receiver<Vec<u8>>>,
 }
 
-pub struct ScreenCapturePlugin;
+pub(crate) struct ScreenCapturePlugin;
 
 impl Plugin for ScreenCapturePlugin {
     fn build(&self, app: &mut App) {
@@ -80,7 +80,7 @@ impl Plugin for ScreenCapturePlugin {
     }
 }
 
-pub struct DelegateIvars {
+pub(crate) struct DelegateIvars {
     frame_sender: Arc<Sender<Vec<u8>>>,
 }
 
@@ -201,7 +201,7 @@ declare_class!(
 );
 
 impl Delegate {
-    pub fn new(frame_sender: Arc<Sender<Vec<u8>>>) -> Id<Self> {
+    pub(crate) fn new(frame_sender: Arc<Sender<Vec<u8>>>) -> Id<Self> {
         let this: Allocated<Self> = Self::alloc();
         unsafe {
             let this = this.set_ivars(DelegateIvars { frame_sender });

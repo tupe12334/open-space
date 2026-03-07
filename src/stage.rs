@@ -11,14 +11,14 @@ use crate::virtual_display::VirtualDisplays;
 use crate::ScaleFactor;
 
 #[derive(Component)]
-pub struct ScreenMarker;
+pub(crate) struct ScreenMarker;
 
 extern "C" {
     fn CGGetActiveDisplayList(max: u32, displays: *mut u32, count: *mut u32) -> i32;
 }
 
 /// Returns (`display_id`, `CGDisplay`) pairs for active displays, up to `max`.
-pub fn get_active_displays(max: usize) -> Vec<(u32, CGDisplay)> {
+pub(crate) fn get_active_displays(max: usize) -> Vec<(u32, CGDisplay)> {
     let mut ids = vec![0_u32; max];
     let mut count = 0_u32;
     let err = unsafe { CGGetActiveDisplayList(max as u32, ids.as_mut_ptr(), &raw mut count) };
@@ -30,14 +30,14 @@ pub fn get_active_displays(max: usize) -> Vec<(u32, CGDisplay)> {
 }
 
 #[derive(Resource)]
-pub struct AssetHandles {
-    pub screens: Vec<Handle<Image>>,
+pub(crate) struct AssetHandles {
+    pub(crate) screens: Vec<Handle<Image>>,
     /// `CGDirectDisplayID` for each screen, in the same order as `screens`.
     #[expect(dead_code, reason = "reserved for future display routing")]
-    pub display_ids: Vec<u32>,
+    pub(crate) display_ids: Vec<u32>,
 }
 
-pub struct StagePlugin;
+pub(crate) struct StagePlugin;
 
 impl Plugin for StagePlugin {
     fn build(&self, app: &mut App) {

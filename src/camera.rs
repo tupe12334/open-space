@@ -1,9 +1,9 @@
 use bevy::prelude::*;
 
 #[derive(Component, Debug)]
-pub struct MainCamera;
+pub(crate) struct MainCamera;
 
-pub struct CameraPlugin;
+pub(crate) struct CameraPlugin;
 
 impl Plugin for CameraPlugin {
     fn build(&self, app: &mut App) {
