@@ -35,7 +35,7 @@ pub(super) struct ImuStore {
 /// The motion data is used to update camera orientation in the main rendering thread.
 /// Number of IMU samples to process before capturing the calibration offset.
 /// This gives the DCMIMU filter time to converge on a stable orientation.
-const CALIBRATION_SAMPLES: u32 = 100;
+const CALIBRATION_SAMPLES: u32 = 1000;
 
 pub(super) fn start_tracking(imu_store: Res<ImuStore>) {
     let shared_dcmimu_clone = Arc::clone(&imu_store.dcmimu);
@@ -55,6 +55,10 @@ pub(super) fn start_tracking(imu_store: Res<ImuStore>) {
         };
         let mut last_timestamp: Option<u64> = None;
         let mut sample_count: u32 = 0;
+        let mut gyro_sum_x: f64 = 0.0;
+        let mut gyro_sum_y: f64 = 0.0;
+        let mut gyro_sum_z: f64 = 0.0;
+        let mut gyro_bias: Option<(f32, f32, f32)> = None;
 
         loop {
             if let GlassesEvent::AccGyro {
@@ -66,9 +70,18 @@ pub(super) fn start_tracking(imu_store: Res<ImuStore>) {
                 if let Some(last_timestamp) = last_timestamp {
                     let dt = (timestamp - last_timestamp) as f32 / 1_000_000.0; // in seconds
 
+                    let (gx, gy, gz) = if let Some((bx, by, bz)) = gyro_bias {
+                        (gyroscope.x - bx, gyroscope.y - by, gyroscope.z - bz)
+                    } else {
+                        gyro_sum_x += gyroscope.x as f64;
+                        gyro_sum_y += gyroscope.y as f64;
+                        gyro_sum_z += gyroscope.z as f64;
+                        (gyroscope.x, gyroscope.y, gyroscope.z)
+                    };
+
                     let mut dcmimu = shared_dcmimu_clone.lock().unwrap();
                     dcmimu.update(
-                        (gyroscope.x, gyroscope.y, gyroscope.z),
+                        (gx, gy, gz),
                         (accelerometer.x, accelerometer.y, accelerometer.z),
                         dt,
                     );
@@ -77,6 +90,14 @@ pub(super) fn start_tracking(imu_store: Res<ImuStore>) {
 
                     // Capture calibration offset once the filter has stabilized
                     if sample_count == CALIBRATION_SAMPLES {
+                        let count = sample_count as f64;
+                        let bias = (
+                            (gyro_sum_x / count) as f32,
+                            (gyro_sum_y / count) as f32,
+                            (gyro_sum_z / count) as f32,
+                        );
+                        gyro_bias = Some(bias);
+
                         let orientation = dcmimu.all();
                         drop(dcmimu);
                         *calibration_clone.lock().unwrap() = Some(CalibrationOffset {
@@ -84,7 +105,11 @@ pub(super) fn start_tracking(imu_store: Res<ImuStore>) {
                             pitch: orientation.pitch,
                             roll: orientation.roll,
                         });
-                        info!("IMU calibration captured after {CALIBRATION_SAMPLES} samples");
+                        info!(
+                            "IMU calibration captured after {CALIBRATION_SAMPLES} samples \
+                             (gyro bias: x={:.6}, y={:.6}, z={:.6} rad/s)",
+                            bias.0, bias.1, bias.2
+                        );
                     }
                 }
 
