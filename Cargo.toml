@@ -145,6 +145,7 @@ wildcard_enum_match_arm = "deny"
 unused_result_ok = "deny"
 map_with_unused_argument_over_ranges = "deny"
 return_and_then = "deny"
+redundant_test_prefix = "deny"
 
 # Intentionally allowed pedantic/nursery lints with justification:
 # This crate heavily uses Bevy and ObjC interop which requires many unsafe casts
