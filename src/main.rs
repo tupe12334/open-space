@@ -1,3 +1,5 @@
+//! Spatial display application using virtual displays and AR glasses.
+
 // Bevy and ObjC interop require significant unsafe code throughout this crate.
 #![allow(
     clippy::undocumented_unsafe_blocks,
@@ -21,9 +23,11 @@ use modules::stage::StagePlugin;
 use modules::virtual_display::VirtualDisplayPlugin;
 use modules::webcam_distance::{ensure_camera_permission, WebcamDistancePlugin};
 
+/// The scale factor for display rendering.
 #[derive(Debug, Resource)]
 #[non_exhaustive]
 pub struct ScaleFactor {
+    /// The numeric scale factor value.
     pub value: f64,
 }
 
