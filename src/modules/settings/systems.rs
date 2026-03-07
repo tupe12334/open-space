@@ -3,9 +3,10 @@ use bevy::window::{Monitor, MonitorSelection, PrimaryMonitor, PrimaryWindow, Win
 use std::sync::atomic::Ordering;
 
 use super::{
-    AppSettings, DISTANCE_STEP, DISTANCE_STEPS, MAX_DISTANCE, MAX_NUM_SCREENS, MIN_DISTANCE,
-    MIN_NUM_SCREENS, SCREEN_STEPS,
+    AppSettings, CENTER_STAGE, DISTANCE_STEP, DISTANCE_STEPS, MAX_DISTANCE, MAX_NUM_SCREENS,
+    MIN_DISTANCE, MIN_NUM_SCREENS, SCREEN_STEPS,
 };
+use crate::modules::hmd::{CalibrationOffset, ImuStore};
 use crate::modules::stage::ScreenMarker;
 
 use super::persistence::save_settings;
@@ -38,6 +39,29 @@ pub(super) fn poll_menu_changes(
     }
 
     save_settings(&settings);
+}
+
+pub(super) fn center_stage(imu_store: Option<Res<ImuStore>>) {
+    if !CENTER_STAGE.swap(false, Ordering::Relaxed) {
+        return;
+    }
+
+    let Some(imu_store) = imu_store else {
+        warn!("No IMU store available — cannot center stage");
+        return;
+    };
+
+    let dcmimu = imu_store.dcmimu.lock().unwrap();
+    let orientation = dcmimu.all();
+    drop(dcmimu);
+
+    *imu_store.calibration.lock().unwrap() = Some(CalibrationOffset {
+        yaw: orientation.yaw,
+        pitch: orientation.pitch,
+        roll: orientation.roll,
+    });
+
+    info!("Center stage: recalibrated to current orientation");
 }
 
 pub(super) fn select_glasses_fullscreen(
