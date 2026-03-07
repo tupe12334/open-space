@@ -296,7 +296,7 @@ fn setup_screen_capture(
                 warn!("SCDisplay not found for display ID {}", target_id);
                 continue;
             };
-            let sender = senders[sender_idx].clone();
+            let sender = Arc::clone(&senders[sender_idx]);
 
             let filter = SCContentFilter::init_with_display_exclude_windows(
                 SCContentFilter::alloc(),
