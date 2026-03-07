@@ -52,6 +52,7 @@ trivial_numeric_casts = "deny"
 unused_import_braces = "deny"
 unused_qualifications = "deny"
 unused_lifetimes = "deny"
+unused_macro_rules = "deny"
 
 [workspace.lints.clippy]
 # Pedantic: catches subtle bugs and enforces idiomatic Rust
