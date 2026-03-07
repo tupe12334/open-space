@@ -64,8 +64,12 @@ pub(super) fn center_stage(imu_store: Option<Res<ImuStore>>) {
     info!("Center stage: recalibrated to current orientation");
 }
 
+/// Maximum number of update frames to wait for the glasses monitor to appear.
+const GLASSES_SCAN_MAX_FRAMES: u32 = 300;
+
 pub(super) fn select_glasses_fullscreen(
     mut done: Local<bool>,
+    mut frames_waited: Local<u32>,
     settings: Res<AppSettings>,
     monitors: Query<(Entity, &Monitor, Option<&PrimaryMonitor>)>,
     mut windows: Query<&mut Window, With<PrimaryWindow>>,
@@ -79,31 +83,19 @@ pub(super) fn select_glasses_fullscreen(
         return;
     }
 
-    *done = true;
-
-    for (entity, monitor, primary) in &monitors {
-        info!(
-            "Monitor {:?}: name={:?}, size={}x{}, refresh={}mHz, primary={}",
-            entity,
-            monitor.name,
-            monitor.physical_width,
-            monitor.physical_height,
-            monitor.refresh_rate_millihertz.unwrap_or(0),
-            primary.is_some()
-        );
-    }
-
-    let Ok(mut window) = windows.single_mut() else {
-        return;
+    let is_virtual = |m: &Monitor| {
+        m.name
+            .as_ref()
+            .is_some_and(|n| n.starts_with("Virtual Screen"))
     };
 
     let glasses_entity = settings.glasses_monitor_name.as_ref().map_or_else(
         || {
-            // Pick the non-primary monitor with the highest refresh rate.
+            // Pick the non-primary, non-virtual monitor with the highest refresh rate.
             // XREAL Air glasses run at 120Hz vs virtual screens at 60Hz.
             monitors
                 .iter()
-                .filter(|(_, _, primary)| primary.is_none())
+                .filter(|(_, m, primary)| primary.is_none() && !is_virtual(m))
                 .max_by_key(|(_, m, _)| m.refresh_rate_millihertz.unwrap_or(0))
                 .map(|(entity, _, _)| entity)
         },
@@ -111,6 +103,7 @@ pub(super) fn select_glasses_fullscreen(
             let filter_lower = name_filter.to_lowercase();
             monitors
                 .iter()
+                .filter(|(_, m, _)| !is_virtual(m))
                 .find(|(_, monitor, _)| {
                     monitor
                         .name
@@ -121,18 +114,39 @@ pub(super) fn select_glasses_fullscreen(
         },
     );
 
-    match glasses_entity {
-        Some(entity) => {
-            let name = monitors
-                .get(entity)
-                .ok()
-                .and_then(|(_, m, _)| m.name.clone())
-                .unwrap_or_else(|| "unknown".into());
-            info!("Switching to fullscreen on glasses monitor: {name}");
-            window.mode = WindowMode::BorderlessFullscreen(MonitorSelection::Entity(entity));
+    if let Some(entity) = glasses_entity {
+        *done = true;
+
+        for (e, monitor, primary) in &monitors {
+            info!(
+                "Monitor {:?}: name={:?}, size={}x{}, refresh={}mHz, primary={}, virtual={}",
+                e,
+                monitor.name,
+                monitor.physical_width,
+                monitor.physical_height,
+                monitor.refresh_rate_millihertz.unwrap_or(0),
+                primary.is_some(),
+                is_virtual(monitor),
+            );
         }
-        None => {
-            warn!("No glasses monitor found; staying windowed");
+
+        let Ok(mut window) = windows.single_mut() else {
+            return;
+        };
+        let name = monitors
+            .get(entity)
+            .ok()
+            .and_then(|(_, m, _)| m.name.clone())
+            .unwrap_or_else(|| "unknown".into());
+        info!("Switching to fullscreen on glasses monitor: {name}");
+        window.mode = WindowMode::BorderlessFullscreen(MonitorSelection::Entity(entity));
+    } else {
+        *frames_waited += 1;
+        if *frames_waited >= GLASSES_SCAN_MAX_FRAMES {
+            *done = true;
+            warn!(
+                "No glasses monitor found after {GLASSES_SCAN_MAX_FRAMES} frames; staying windowed on primary"
+            );
         }
     }
 }
