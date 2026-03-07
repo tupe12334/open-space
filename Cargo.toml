@@ -166,6 +166,8 @@ alloc_instead_of_core = "deny"
 single_char_lifetime_names = "deny"
 missing_inline_in_public_items = "deny"
 modulo_arithmetic = "deny"
+inline_asm_x86_att_syntax = "deny"
+inline_asm_x86_intel_syntax = "deny"
 exhaustive_enums = "deny"
 exhaustive_structs = "deny"
 
