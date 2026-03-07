@@ -28,10 +28,44 @@ where
     }
     if let Some(main_idx) = specs.iter().position(|s| get_id(s) == main_id) {
         let n = specs.len();
-        let total_rows = n.div_ceil(GRID_COLS);
-        let center_col = GRID_COLS / 2;
-        let center_row = total_rows / 2;
-        let center_idx = (center_row * GRID_COLS + center_col).min(n - 1);
+        let center_idx = grid_center_index(n);
         specs.swap(main_idx, center_idx);
     }
+}
+
+/// Return the grid index where the main display will be placed.
+pub(crate) fn grid_center_index(n: usize) -> usize {
+    let total_rows = n.div_ceil(GRID_COLS);
+    let center_col = GRID_COLS / 2;
+    let center_row = total_rows / 2;
+    (center_row * GRID_COLS + center_col).min(n - 1)
+}
+
+/// Return a user-friendly position name for a grid slot.
+pub(crate) fn grid_position_name(row: usize, col: usize, total_rows: usize) -> String {
+    let col_name = match col {
+        0 => "Left",
+        1 => "Middle",
+        2 => "Right",
+        _ => "Unknown",
+    };
+
+    if total_rows == 1 {
+        return col_name.to_owned();
+    }
+
+    let center_row = total_rows / 2;
+
+    let row_name = match row.cmp(&center_row) {
+        std::cmp::Ordering::Less => "Top",
+        std::cmp::Ordering::Greater => "Bottom",
+        std::cmp::Ordering::Equal => return col_name.to_owned(),
+    };
+
+    let center_col = GRID_COLS / 2;
+    if col == center_col {
+        return row_name.to_owned();
+    }
+
+    format!("{row_name} {col_name}")
 }

@@ -8,6 +8,7 @@ use objc2::msg_send;
 use objc2::runtime::{AnyClass, AnyObject};
 use objc2_foundation::{CGSize, NSString};
 
+use crate::modules::grid_layout::{grid_center_index, grid_position_name, GRID_COLS};
 use crate::modules::settings::AppSettings;
 
 extern "C" {
@@ -35,6 +36,7 @@ struct VirtualDisplay {
     display_id: u32,
     width: u32,
     height: u32,
+    name: String,
 }
 
 /// Resource that keeps virtual displays alive for the lifetime of the app.
@@ -48,6 +50,8 @@ pub(crate) struct VirtualDisplayInfo {
     pub(crate) display_id: u32,
     pub(crate) width: u32,
     pub(crate) height: u32,
+    #[expect(dead_code, reason = "public API reserved for future use")]
+    pub(crate) name: String,
 }
 
 impl VirtualDisplays {
@@ -63,6 +67,7 @@ impl VirtualDisplays {
                 display_id: d.display_id,
                 width: d.width,
                 height: d.height,
+                name: d.name.clone(),
             })
             .collect()
     }
@@ -84,6 +89,12 @@ pub(super) fn create_virtual_displays_system(
     let height = 1080_u32;
     let refresh_rate = 60.0_f64;
 
+    // Pre-compute grid position names for each virtual display.
+    // The main display will be appended at index `count`, making total = count + 1.
+    let num_screens = count + 1;
+    let total_rows = num_screens.div_ceil(GRID_COLS);
+    let center_idx = grid_center_index(num_screens);
+
     let descriptor_cls = AnyClass::get("CGVirtualDisplayDescriptor")
         .expect("CGVirtualDisplayDescriptor class not found");
     let mode_cls =
@@ -94,10 +105,17 @@ pub(super) fn create_virtual_displays_system(
     let nsarray_cls = AnyClass::get("NSArray").unwrap();
 
     for i in 0..count {
+        // Virtual display at creation index `i` will end up at grid position `grid_pos`
+        // after center_main_display swaps main into center_idx.
+        let grid_pos = if i == center_idx { count } else { i };
+        let row = grid_pos / GRID_COLS;
+        let col = grid_pos % GRID_COLS;
+        let display_name = grid_position_name(row, col, total_rows);
+
         unsafe {
             let descriptor = alloc_init(descriptor_cls);
 
-            let name = NSString::from_str(&format!("Virtual Screen {}", i + 1));
+            let name = NSString::from_str(&display_name);
             let _: () = msg_send![descriptor, setName: &*name];
             let _: () = msg_send![descriptor, setMaxPixelsWide: width];
             let _: () = msg_send![descriptor, setMaxPixelsHigh: height];
@@ -127,8 +145,8 @@ pub(super) fn create_virtual_displays_system(
 
             if display.is_null() {
                 warn!(
-                    "Virtual display {} creation failed (initWithDescriptor returned nil)",
-                    i + 1
+                    "Virtual display '{}' creation failed (initWithDescriptor returned nil)",
+                    display_name
                 );
                 ffi::objc_release(descriptor as *mut _);
                 ffi::objc_release(settings as *mut _);
@@ -138,10 +156,8 @@ pub(super) fn create_virtual_displays_system(
             let display_id: u32 = msg_send![display, displayID];
             let result: bool = msg_send![display, applySettings: settings];
             info!(
-                "Virtual display {} created: ID={}, applySettings={}",
-                i + 1,
-                display_id,
-                result
+                "Virtual display '{}' created: ID={}, applySettings={}",
+                display_name, display_id, result
             );
 
             ffi::objc_release(descriptor as *mut _);
@@ -149,9 +165,8 @@ pub(super) fn create_virtual_displays_system(
 
             if !result {
                 warn!(
-                    "applySettings failed for virtual display {} (ID {})",
-                    i + 1,
-                    display_id
+                    "applySettings failed for virtual display '{}' (ID {})",
+                    display_name, display_id
                 );
                 ffi::objc_release(display as *mut _);
                 continue;
@@ -162,6 +177,7 @@ pub(super) fn create_virtual_displays_system(
                 display_id,
                 width,
                 height,
+                name: display_name,
             });
         }
     }
