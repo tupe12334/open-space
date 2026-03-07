@@ -69,6 +69,7 @@ redundant_imports = "deny"
 redundant_lifetimes = "deny"
 unit_bindings = "deny"
 missing_copy_implementations = "deny"
+missing_debug_implementations = "deny"
 
 [workspace.lints.clippy]
 # Pedantic: catches subtle bugs and enforces idiomatic Rust
