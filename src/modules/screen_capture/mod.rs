@@ -1,3 +1,9 @@
+mod permission;
+mod plugin;
+
+pub(crate) use permission::ensure_screen_capture_permission;
+pub(crate) use plugin::ScreenCapturePlugin;
+
 use std::sync::Arc;
 
 use bevy::prelude::*;
@@ -29,34 +35,10 @@ use crate::modules::stage::{get_active_displays, AssetHandles};
 use crate::modules::virtual_display::VirtualDisplays;
 use crate::ScaleFactor;
 
-mod permission;
-pub(crate) use permission::ensure_screen_capture_permission;
-
 #[derive(Resource)]
-struct FrameChannel {
-    senders: Vec<Arc<Sender<Vec<u8>>>>,
-    receivers: Vec<Receiver<Vec<u8>>>,
-}
-
-pub(crate) struct ScreenCapturePlugin;
-
-impl Plugin for ScreenCapturePlugin {
-    fn build(&self, app: &mut App) {
-        let num_screens = app
-            .world()
-            .get_resource::<crate::modules::settings::AppSettings>()
-            .map_or(6, |s| s.num_screens as usize);
-        let mut senders = Vec::new();
-        let mut receivers = Vec::new();
-        for _ in 0..num_screens {
-            let (tx, rx) = mpsc::channel::<Vec<u8>>(60);
-            senders.push(Arc::new(tx));
-            receivers.push(rx);
-        }
-        app.insert_resource(FrameChannel { senders, receivers })
-            .add_systems(Startup, setup_screen_capture)
-            .add_systems(Update, update_screen_texture);
-    }
+pub(super) struct FrameChannel {
+    pub(super) senders: Vec<Arc<Sender<Vec<u8>>>>,
+    pub(super) receivers: Vec<Receiver<Vec<u8>>>,
 }
 
 pub(crate) struct DelegateIvars {
@@ -189,7 +171,7 @@ impl Delegate {
     }
 }
 
-fn setup_screen_capture(
+pub(super) fn setup_screen_capture(
     frame_channel: Res<FrameChannel>,
     scale_factor: Res<ScaleFactor>,
     virtual_displays: Res<VirtualDisplays>,
@@ -357,7 +339,7 @@ fn setup_screen_capture(
     });
 }
 
-fn update_screen_texture(
+pub(super) fn update_screen_texture(
     mut frame_channel: ResMut<FrameChannel>,
     mut images: ResMut<Assets<Image>>,
     asset_handles: Res<AssetHandles>,

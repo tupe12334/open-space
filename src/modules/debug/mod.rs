@@ -1,40 +1,26 @@
-use bevy::{
-    diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin},
-    prelude::*,
-    window::Monitor,
-};
+mod plugin;
+
+pub(crate) use plugin::DebugPlugin;
+
+use bevy::{prelude::*, window::Monitor};
 
 use crate::modules::camera::MainCamera;
 use crate::modules::stage::{AssetHandles, ScreenMarker};
 
-pub(crate) struct DebugPlugin;
+#[derive(Resource)]
+pub(super) struct DebugTimer(pub(super) Timer);
 
 #[derive(Resource)]
-struct DebugTimer(Timer);
+pub(super) struct FrameCounter(pub(super) u64);
 
-#[derive(Resource)]
-struct FrameCounter(u64);
-
-impl Plugin for DebugPlugin {
-    fn build(&self, app: &mut App) {
-        app.insert_resource(DebugTimer(Timer::from_seconds(2.0, TimerMode::Repeating)))
-            .insert_resource(FrameCounter(0))
-            .add_systems(Update, (debug_transforms, count_frames))
-            .add_plugins((
-                FrameTimeDiagnosticsPlugin::default(),
-                LogDiagnosticsPlugin::default(),
-            ));
-    }
-}
-
-fn count_frames(mut counter: ResMut<FrameCounter>) {
+pub(super) fn count_frames(mut counter: ResMut<FrameCounter>) {
     counter.0 += 1;
     if counter.0 <= 5 || counter.0.is_multiple_of(100) {
         info!("[DEBUG] Update frame #{}", counter.0);
     }
 }
 
-fn debug_transforms(
+pub(super) fn debug_transforms(
     time: Res<Time>,
     mut timer: ResMut<DebugTimer>,
     camera_query: Query<(Entity, &Transform, &Camera, &Projection), With<MainCamera>>,

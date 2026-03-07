@@ -1,17 +1,13 @@
+mod plugin;
+
+pub(crate) use plugin::CameraPlugin;
+
 use bevy::prelude::*;
 
 #[derive(Component, Debug)]
 pub(crate) struct MainCamera;
 
-pub(crate) struct CameraPlugin;
-
-impl Plugin for CameraPlugin {
-    fn build(&self, app: &mut App) {
-        app.add_systems(Startup, spawn_camera);
-    }
-}
-
-fn spawn_camera(mut commands: Commands) {
+pub(super) fn spawn_camera(mut commands: Commands) {
     commands.spawn((
         Camera3d::default(),
         Camera::default(),

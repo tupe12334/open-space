@@ -1,3 +1,7 @@
+mod plugin;
+
+pub(crate) use plugin::VirtualDisplayPlugin;
+
 use bevy::prelude::*;
 use objc2::ffi;
 use objc2::msg_send;
@@ -64,19 +68,6 @@ impl VirtualDisplays {
     }
 }
 
-pub(crate) struct VirtualDisplayPlugin;
-
-impl Plugin for VirtualDisplayPlugin {
-    fn build(&self, app: &mut App) {
-        // Create virtual displays in PreStartup so they're ready before
-        // StagePlugin and ScreenCapturePlugin run in Startup.
-        // This runs AFTER winit has initialized, avoiding the panic caused by
-        // CGDisplayCopyAllDisplayModes returning NULL for virtual displays.
-        app.init_resource::<VirtualDisplays>()
-            .add_systems(PreStartup, create_virtual_displays_system);
-    }
-}
-
 /// Alloc+init an `ObjC` object, returning a retained raw pointer.
 unsafe fn alloc_init(cls: &AnyClass) -> *const AnyObject {
     let obj: *const AnyObject = msg_send![cls, alloc];
@@ -84,7 +75,7 @@ unsafe fn alloc_init(cls: &AnyClass) -> *const AnyObject {
     obj
 }
 
-fn create_virtual_displays_system(
+pub(super) fn create_virtual_displays_system(
     mut virtual_displays: ResMut<VirtualDisplays>,
     settings: Res<AppSettings>,
 ) {

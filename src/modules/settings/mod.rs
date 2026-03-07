@@ -1,3 +1,7 @@
+mod plugin;
+
+pub(crate) use plugin::SettingsPlugin;
+
 use bevy::prelude::*;
 use objc2::msg_send;
 use objc2::runtime::{AnyClass, AnyObject};
@@ -91,16 +95,6 @@ struct NativeMenuHandler(objc2::rc::Id<MenuHandler>);
 // solely to prevent deallocation. It is never accessed from Bevy threads.
 unsafe impl Send for NativeMenuHandler {}
 unsafe impl Sync for NativeMenuHandler {}
-
-pub(crate) struct SettingsPlugin;
-
-impl Plugin for SettingsPlugin {
-    fn build(&self, app: &mut App) {
-        // NOTE: setup_menu_bar is disabled because modifying NSApplication's
-        // menu from inside a Bevy Startup system deadlocks the winit event loop.
-        app.add_systems(Update, poll_menu_changes);
-    }
-}
 
 fn settings_path() -> PathBuf {
     PathBuf::from(SETTINGS_FILE)
@@ -249,7 +243,7 @@ fn setup_menu_bar(mut commands: Commands) {
     commands.insert_resource(NativeMenuHandler(handler));
 }
 
-fn poll_menu_changes(
+pub(super) fn poll_menu_changes(
     mut settings: ResMut<AppSettings>,
     mut screen_transforms: Query<&mut Transform, With<crate::modules::stage::ScreenMarker>>,
 ) {

@@ -1,3 +1,7 @@
+mod plugin;
+
+pub(crate) use plugin::StagePlugin;
+
 use bevy::{
     asset::RenderAssetUsages,
     prelude::*,
@@ -37,15 +41,7 @@ pub(crate) struct AssetHandles {
     pub(crate) display_ids: Vec<u32>,
 }
 
-pub(crate) struct StagePlugin;
-
-impl Plugin for StagePlugin {
-    fn build(&self, app: &mut App) {
-        app.add_systems(Startup, (spawn_stage, spawn_screen));
-    }
-}
-
-fn spawn_stage(
+pub(super) fn spawn_stage(
     mut commands: Commands,
     mut materials: ResMut<Assets<StandardMaterial>>,
     _images: ResMut<Assets<Image>>,
@@ -62,51 +58,9 @@ fn spawn_stage(
         })),
         Transform::from_xyz(0.0, -4.0, 0.0),
     ));
-
-    // let sphere_texture = Image::new(
-    //     Extent3d {
-    //         width: 256,
-    //         height: 256,
-    //         depth_or_array_layers: 1,
-    //     },
-    //     TextureDimension::D2,
-    //     (0..256 * 256)
-    //         .flat_map(|i| {
-    //             let y = (i / 256) as f32 / 256.0;
-    //             let r = 255;
-    //             let g = ((1.0 - y) * 255.0) as u8;
-    //             let b = 0;
-    //             vec![r, g, b, 255]
-    //         })
-    //         .collect(),
-    //     TextureFormat::Rgba8UnormSrgb,
-    //     RenderAssetUsages::RENDER_WORLD,
-    // );
-
-    // // info!(
-    // //     "All image handles BEFORE SPHERE INSERT: {:?}",
-    // //     images.ids().collect::<Vec<_>>()
-    // // );
-    // let sphere_texture_handle = images.add(sphere_texture);
-    // // info!("SPHERE texture handle: {:?}", sphere_texture_handle);
-    // // info!(
-    // //     "All image handles AFTER SPHERE INSERT: {:?}",
-    // //     images.ids().collect::<Vec<_>>()
-    // // );
-    // let sphere_material = materials.add(StandardMaterial {
-    //     base_color_texture: Some(sphere_texture_handle),
-    //     ..default()
-    // });
-
-    // // Test spheres in different positions
-    // commands.spawn((
-    //     Mesh3d(meshes.add(Sphere::default().mesh())),
-    //     MeshMaterial3d(sphere_material),
-    //     Transform::from_xyz(0.0, 1.0, -8.0),
-    // ));
 }
 
-fn spawn_screen(
+pub(super) fn spawn_screen(
     mut commands: Commands,
     mut images: ResMut<Assets<Image>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
