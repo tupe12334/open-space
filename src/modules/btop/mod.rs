@@ -219,8 +219,15 @@ pub(super) fn setup_btop_capture(frame_channel: Res<BtopFrameChannel>) {
     )]
     std::thread::spawn(move || {
         info!("Launching btop in Terminal.app...");
+        let config_path = std::env::current_dir()
+            .expect("failed to get current dir")
+            .join("assets/btop.conf");
+        let script = format!(
+            "tell application \"Terminal\" to do script \"btop --config '{}'\"",
+            config_path.display()
+        );
         let spawn_result = std::process::Command::new("osascript")
-            .args(["-e", "tell application \"Terminal\" to do script \"btop\""])
+            .args(["-e", &script])
             .output();
 
         match spawn_result {
