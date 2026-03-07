@@ -76,6 +76,7 @@ keyword_idents_2024 = "deny"
 unstable_features = "deny"
 missing_docs = "deny"
 closure_returning_async_block = "deny"
+keyword_idents_2018 = "deny"
 
 [workspace.lints.clippy]
 # Pedantic: catches subtle bugs and enforces idiomatic Rust
