@@ -67,6 +67,7 @@ variant_size_differences = "deny"
 ambiguous_negative_literals = "deny"
 redundant_imports = "deny"
 redundant_lifetimes = "deny"
+unit_bindings = "deny"
 
 [workspace.lints.clippy]
 # Pedantic: catches subtle bugs and enforces idiomatic Rust
