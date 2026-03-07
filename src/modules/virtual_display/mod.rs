@@ -79,7 +79,7 @@ pub(super) fn create_virtual_displays_system(
     mut virtual_displays: ResMut<VirtualDisplays>,
     settings: Res<AppSettings>,
 ) {
-    let count = settings.num_screens as usize;
+    let count = (settings.num_screens as usize).saturating_sub(1);
     let width = 1920_u32;
     let height = 1080_u32;
     let refresh_rate = 60.0_f64;
