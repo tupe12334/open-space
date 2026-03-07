@@ -5,8 +5,10 @@
     "ahrs",
     "autoreleased",
     "bevy",
-    "bunx",
     "BGRA",
+    "Btop",
+    "bunx",
+    "cheatbook",
     "clippy",
     "dcmimu",
     "framepace",
@@ -25,8 +27,7 @@
     "Vsync",
     "winit",
     "XREAL",
-    "xyzw",
-    "cheatbook"
+    "xyzw"
   ],
   "ignorePaths": [
     "target/**",
