@@ -16,7 +16,10 @@ impl Plugin for DebugPlugin {
     fn build(&self, app: &mut App) {
         app.insert_resource(DebugTimer(Timer::from_seconds(2.0, TimerMode::Repeating)))
             .add_systems(Update, debug_transforms)
-            .add_plugins((FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin::default()));
+            .add_plugins((
+                FrameTimeDiagnosticsPlugin::default(),
+                LogDiagnosticsPlugin::default(),
+            ));
     }
 }
 

@@ -20,6 +20,11 @@ fn spawn_camera(mut commands: Commands) {
             ..default()
         }),
         Transform::from_xyz(0.0, 0.0, 0.0),
+        AmbientLight {
+            color: Color::default(),
+            brightness: 100.0,
+            affects_lightmapped_meshes: true,
+        },
         MainCamera,
     ));
 }

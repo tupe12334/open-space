@@ -399,7 +399,7 @@ fn update_screen_texture(
         }
         if let Some(frame_data) = latest {
             if let Some(image) = images.get_mut(&asset_handles.screens[i]) {
-                image.data = frame_data;
+                image.data = Some(frame_data);
             }
         }
     }

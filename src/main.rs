@@ -67,10 +67,6 @@ fn main() {
     let settings = settings::load_settings();
 
     App::new()
-        .insert_resource(AmbientLight {
-            color: Color::default(),
-            brightness: 100.0,
-        })
         .insert_resource(ScaleFactor { value: 1.0 })
         .insert_resource(settings)
         .add_plugins(DefaultPlugins.set(WindowPlugin {

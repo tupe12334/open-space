@@ -7,7 +7,7 @@ license = "MIT"
 repository = "https://github.com/tupe12334/open-space"
 
 [dependencies]
-bevy = "0.15.3"
+bevy = "0.18.1"
 
 winit = "0.30.5"
 tokio = { version = "1.50.0", features = ["full"] }
