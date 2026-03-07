@@ -35,10 +35,12 @@ extern "C" {
 }
 
 /// Check and request screen recording permission before the event loop starts.
-/// Must be called from main() before App::new() to avoid blocking the event loop.
+/// Must be called from `main()` before `App::new()` to avoid blocking the event loop.
 pub fn ensure_screen_capture_permission() {
     let has_permission = unsafe { CGPreflightScreenCaptureAccess() };
-    if !has_permission {
+    if has_permission {
+        eprintln!("Screen recording permission granted");
+    } else {
         eprintln!("Screen recording permission not granted. Requesting access...");
         let granted = unsafe { CGRequestScreenCaptureAccess() };
         if !granted {
@@ -48,8 +50,6 @@ pub fn ensure_screen_capture_permission() {
                  then restart the app."
             );
         }
-    } else {
-        eprintln!("Screen recording permission granted");
     }
 }
 
@@ -66,8 +66,7 @@ impl Plugin for ScreenCapturePlugin {
         let num_screens = app
             .world()
             .get_resource::<crate::settings::AppSettings>()
-            .map(|s| s.num_screens as usize)
-            .unwrap_or(6);
+            .map_or(6, |s| s.num_screens as usize);
         let mut senders = Vec::new();
         let mut receivers = Vec::new();
         for _ in 0..num_screens {
@@ -220,15 +219,7 @@ fn setup_screen_capture(
 
     // Collect (display_id, capture_width, capture_height)
     let vd = virtual_displays.displays();
-    let display_specs: Vec<(u32, usize, usize)> = if !vd.is_empty() {
-        vd.iter()
-            .map(|d| {
-                let w = (d.width as f64 * scale_factor.value) as usize;
-                let h = (d.height as f64 * scale_factor.value) as usize;
-                (d.display_id, w, h)
-            })
-            .collect()
-    } else {
+    let display_specs: Vec<(u32, usize, usize)> = if vd.is_empty() {
         get_active_displays(2)
             .iter()
             .map(|(id, d)| {
@@ -237,8 +228,17 @@ fn setup_screen_capture(
                 (*id, w, h)
             })
             .collect()
+    } else {
+        vd.iter()
+            .map(|d| {
+                let w = (d.width as f64 * scale_factor.value) as usize;
+                let h = (d.height as f64 * scale_factor.value) as usize;
+                (d.display_id, w, h)
+            })
+            .collect()
     };
 
+    #[allow(clippy::infinite_loop)]
     std::thread::spawn(move || {
         let (sc_tx, mut sc_rx) = mpsc::channel(1);
         SCShareableContent::get_shareable_content_with_completion_closure(
@@ -275,29 +275,26 @@ fn setup_screen_capture(
         info!("Target display IDs: {:?}", target_ids);
 
         // We need to keep delegates and streams alive for the duration of capture
-        let mut _delegates: Vec<Id<Delegate>> = Vec::new();
-        let mut _streams: Vec<Id<SCStream>> = Vec::new();
+        let mut delegates: Vec<Id<Delegate>> = Vec::new();
+        let mut streams: Vec<Id<SCStream>> = Vec::new();
 
         // Match each target display ID to its SCDisplay and sender
         for (sender_idx, &(target_id, cap_w, cap_h)) in display_specs.iter().enumerate() {
             let sc_display = sc_displays.iter().find(|d| d.display_id() == target_id);
-            let sc_display = match sc_display {
-                Some(d) => {
-                    info!(
-                        "  Matched sender[{}] -> SC display id={}, sc_size={}x{}, capture={}x{}",
-                        sender_idx,
-                        d.display_id(),
-                        d.width(),
-                        d.height(),
-                        cap_w,
-                        cap_h,
-                    );
-                    d
-                }
-                None => {
-                    warn!("SCDisplay not found for display ID {}", target_id);
-                    continue;
-                }
+            let sc_display = if let Some(d) = sc_display {
+                info!(
+                    "  Matched sender[{}] -> SC display id={}, sc_size={}x{}, capture={}x{}",
+                    sender_idx,
+                    d.display_id(),
+                    d.width(),
+                    d.height(),
+                    cap_w,
+                    cap_h,
+                );
+                d
+            } else {
+                warn!("SCDisplay not found for display ID {}", target_id);
+                continue;
             };
             let sender = senders[sender_idx].clone();
 
@@ -324,7 +321,7 @@ fn setup_screen_capture(
                 stream_error,
             );
             let queue = Queue::new(
-                &format!("com.spatial_display.queue.{}", sender_idx),
+                &format!("com.spatial_display.queue.{sender_idx}"),
                 QueueAttribute::Serial,
             );
             let output = ProtocolObject::from_ref(&*delegate);
@@ -336,15 +333,15 @@ fn setup_screen_capture(
                 continue;
             }
 
-            _delegates.push(delegate);
-            _streams.push(stream);
+            delegates.push(delegate);
+            streams.push(stream);
         }
 
         info!("Waiting 5 seconds before starting capture...");
         std::thread::sleep(std::time::Duration::from_secs(5));
 
-        info!("STARTING CAP for {} display(s)", _streams.len());
-        for (idx, stream) in _streams.iter().enumerate() {
+        info!("STARTING CAP for {} display(s)", streams.len());
+        for (idx, stream) in streams.iter().enumerate() {
             stream.start_capture(move |result| {
                 info!("start_capture for display {}", idx);
                 if let Some(error) = result {
@@ -384,5 +381,5 @@ fn update_screen_texture(
     }
 
     // Touch materials to force texture update
-    for (_, _material) in &mut materials {}
+    for (_, _material) in materials.iter_mut() {}
 }

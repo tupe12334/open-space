@@ -49,10 +49,7 @@ fn wait_for_physical_display_modes() {
             break;
         }
         if start.elapsed() > timeout {
-            eprintln!(
-                "Timed out waiting for physical display modes on: {:?}",
-                missing
-            );
+            eprintln!("Timed out waiting for physical display modes on: {missing:?}");
             break;
         }
         std::thread::sleep(poll_interval);
