@@ -113,6 +113,8 @@ pub(crate) fn start_tracking(imu_store: Res<ImuStore>) {
                             "IMU calibration captured after {} total samples",
                             BIAS_SAMPLES + CONVERGENCE_SAMPLES
                         );
+                    } else {
+                        // Normal sample: no action needed outside calibration thresholds
                     }
                 }
 
