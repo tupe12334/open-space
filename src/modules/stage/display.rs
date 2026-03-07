@@ -17,7 +17,7 @@ pub(crate) fn get_active_displays(max: usize) -> Vec<(u32, CGDisplay)> {
 
     // SAFETY: `ids` is a valid buffer of `max` elements, and `count` is a valid mutable pointer.
     let err = unsafe { CGGetActiveDisplayList(max as u32, ids.as_mut_ptr(), &raw mut count) };
-    if err != 0 {
+    if err != 0_i32 {
         return vec![];
     }
 

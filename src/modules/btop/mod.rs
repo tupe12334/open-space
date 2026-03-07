@@ -223,8 +223,8 @@ fn draw_glyph(
             let px = x_off as i32 + glyph_left + gx as i32;
             let py = y_off as i32 + glyph_top + gy as i32;
 
-            if px < 0
-                || py < 0
+            if px < 0_i32
+                || py < 0_i32
                 || px >= BTOP_CAPTURE_WIDTH as i32
                 || py >= BTOP_CAPTURE_HEIGHT as i32
             {

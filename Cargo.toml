@@ -171,6 +171,7 @@ inline_asm_x86_intel_syntax = "deny"
 big_endian_bytes = "deny"
 little_endian_bytes = "deny"
 host_endian_bytes = "deny"
+default_numeric_fallback = "deny"
 exhaustive_enums = "deny"
 exhaustive_structs = "deny"
 
