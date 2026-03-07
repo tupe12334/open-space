@@ -17,7 +17,18 @@ This project uses [cargo-husky](https://github.com/rhysd/cargo-husky) to manage 
 
 ### Pre-push
 
+- `bunx cspell` — checks spelling in source files and docs
 - `cargo test` — runs the full test suite before pushing
+
+### Running cspell locally
+
+To check spelling manually:
+
+```sh
+bunx cspell "**/*.rs" "**/*.toml" "**/*.md" --no-progress
+```
+
+Project-specific terms are defined in `cspell.json` at the project root. Add domain-specific words to the `words` array when needed.
 
 ## Getting started
 
@@ -38,7 +49,7 @@ The goal was to create an [AR desktop](https://www.xreal.com/experience/?virtual
 
 I created this small demo with a lot of help from GitHub Copilot. It was my first time writing Rust, so there may be design flaws or errors in the code. Unfortunately, I don't have enough time to continue working on this project and I also lack experience in this field. Therefore I have decided to open source this code in hope that someone more experienced can make something out of it. I have added some notes below of things I learned whist researching and developing this project:
 
-[This](https://kguttag.com/2023/08/05/apple-vision-pro-part-5a-why-monitor-replacement-is-ridiculous/#rendering-a-dot) article goes into great depth explaining the problems with having virtual displays in VR/AR, the main problem being that rendered text uses "hints" to acheive better antialiasing, and when you project the display in virtual space the pixels no longer align properly which results in text that looks grainy and also shimmers. Locking the roll axis would aleviate a lot of the problems with distortion of text. In an ideal scenario you would have a virtual 1080p display be the exact size of the display output so that the pixels line up perfectly with the 1080p display of the glasses.
+[This](https://kguttag.com/2023/08/05/apple-vision-pro-part-5a-why-monitor-replacement-is-ridiculous/#rendering-a-dot) article goes into great depth explaining the problems with having virtual displays in VR/AR, the main problem being that rendered text uses "hints" to achieve better antialiasing, and when you project the display in virtual space the pixels no longer align properly which results in text that looks grainy and also shimmers. Locking the roll axis would alleviate a lot of the problems with distortion of text. In an ideal scenario you would have a virtual 1080p display be the exact size of the display output so that the pixels line up perfectly with the 1080p display of the glasses.
 
 VITURE's [SpaceWalker](https://www.reddit.com/r/VITURE/comments/1bl72zb/unlock_the_best_of_your_macbook_spacewalker_for/) app has a great implementation of a dropdown UI which should be way easier to implement than slider style settings that Nebula has.
 

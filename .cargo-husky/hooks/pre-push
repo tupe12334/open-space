@@ -2,5 +2,8 @@
 
 set -e
 
+echo "Running cspell spell check..."
+bunx cspell "**/*.rs" "**/*.toml" "**/*.md" --no-progress
+
 echo "Running cargo test..."
 cargo test

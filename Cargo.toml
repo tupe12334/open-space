@@ -2,21 +2,24 @@
 name = "open-space"
 version = "0.1.0"
 edition = "2021"
+description = "Spatial display application using virtual displays and AR glasses"
+license = "MIT"
+repository = "https://github.com/tupe12334/open-space"
 
 [dependencies]
 bevy = "0.18.1"
 
 winit = "0.30.5"
-tokio = { version = "1.41.0", features = ["full"] }
-core-graphics2 = { version = "0.4.1", default-features = false, features = [
+tokio = { version = "1.50.0", features = ["full"] }
+core-graphics2 = { version = "0.5.2", default-features = false, features = [
   "display",
   "objc",
   "window",
 ] }
-core-media = { version = "0.5.1", default-features = false, features = [
+core-media = { version = "0.7.1", default-features = false, features = [
   "objc",
 ] }
-core-video = { version = "0.4.3", features = ["objc"] }
+core-video = { version = "0.5.2", features = ["objc"] }
 objc2 = { version = "0.5.2", features = ["relax-sign-encoding"] }
 objc2-foundation = { version = "0.2.2", features = [
   "NSArray",
@@ -25,11 +28,11 @@ objc2-foundation = { version = "0.2.2", features = [
   "NSGeometry",
   "NSString",
 ] }
-dispatch2 = "0.1.0"
-core-foundation = { version = "0.10.0", default-features = false }
+dispatch2 = "0.3.1"
+core-foundation = { version = "0.10.1", default-features = false }
 rand = "0.8.5"
 libc = "0.2.161"
-screen-capture-kit = "0.3.1"
+screen-capture-kit = "0.6.1"
 ar-drivers = "0.4.3"
 ahrs = "0.8.0"
 nalgebra = "0.34"
@@ -40,6 +43,135 @@ cargo-husky = { version = "1", default-features = false, features = ["user-hooks
 
 [workspace]
 resolver = "2"
+
+[workspace.lints.rust]
+# Compiler lints promoted to deny
+macro_use_extern_crate = "deny"
+meta_variable_misuse = "deny"
+single_use_lifetimes = "deny"
+trivial_numeric_casts = "deny"
+unused_import_braces = "deny"
+unused_lifetimes = "deny"
+unused_macro_rules = "deny"
+unused_qualifications = "deny"
+
+[workspace.lints.clippy]
+# Pedantic: catches subtle bugs and enforces idiomatic Rust
+pedantic = { level = "deny", priority = -1 }
+# Nursery: early detection of newer lint patterns
+nursery = { level = "deny", priority = -1 }
+# Cargo: Cargo manifest best practices
+cargo = { level = "deny", priority = -1 }
+
+# Selected restriction lints (enabling all restriction lints conflicts with pedantic)
+allow_attributes_without_reason = "deny"
+as_underscore = "deny"
+assertions_on_result_states = "deny"
+cfg_not_test = "deny"
+clone_on_ref_ptr = "deny"
+create_dir = "deny"
+decimal_literal_representation = "deny"
+disallowed_script_idents = "deny"
+dbg_macro = "deny"
+deref_by_slicing = "deny"
+empty_drop = "deny"
+empty_enum_variants_with_brackets = "deny"
+empty_structs_with_brackets = "deny"
+error_impl_error = "deny"
+exit = "deny"
+filetype_is_file = "deny"
+float_cmp_const = "deny"
+fn_to_numeric_cast_any = "deny"
+format_push_string = "deny"
+get_unwrap = "deny"
+if_then_some_else_none = "deny"
+impl_trait_in_params = "deny"
+infinite_loop = "deny"
+iter_over_hash_type = "deny"
+large_include_file = "deny"
+let_underscore_must_use = "deny"
+let_underscore_untyped = "deny"
+lossy_float_literal = "deny"
+map_err_ignore = "deny"
+mem_forget = "deny"
+missing_assert_message = "deny"
+missing_asserts_for_indexing = "deny"
+mixed_read_write_in_expression = "deny"
+multiple_inherent_impl = "deny"
+mutex_atomic = "deny"
+needless_raw_strings = "deny"
+non_zero_suggestions = "deny"
+panic = "deny"
+partial_pub_fields = "deny"
+pathbuf_init_then_push = "deny"
+pub_without_shorthand = "deny"
+rc_buffer = "deny"
+rc_mutex = "deny"
+redundant_type_annotations = "deny"
+ref_patterns = "deny"
+renamed_function_params = "deny"
+rest_pat_in_fully_bound_structs = "deny"
+self_named_module_files = "deny"
+semicolon_inside_block = "deny"
+str_to_string = "deny"
+string_add = "deny"
+string_lit_chars_any = "deny"
+string_slice = "deny"
+suspicious_xor_used_as_pow = "deny"
+tests_outside_test_module = "deny"
+todo = "deny"
+try_err = "deny"
+undocumented_unsafe_blocks = "deny"
+unimplemented = "deny"
+unreachable = "deny"
+unwrap_in_result = "deny"
+unnecessary_result_map_or_else = "deny"
+unnecessary_safety_comment = "deny"
+unnecessary_safety_doc = "deny"
+unnecessary_self_imports = "deny"
+unneeded_field_pattern = "deny"
+unseparated_literal_suffix = "deny"
+verbose_file_reads = "deny"
+wildcard_enum_match_arm = "deny"
+
+# Intentionally allowed pedantic/nursery lints with justification:
+# This crate heavily uses Bevy and ObjC interop which requires many unsafe casts
+cast_possible_truncation = "allow"
+cast_precision_loss = "allow"
+cast_sign_loss = "allow"
+cast_lossless = "allow"
+# Bevy systems require owned params (Res, Query, etc.) by design
+needless_pass_by_value = "allow"
+# Bevy systems use many parameters by design
+too_many_arguments = "allow"
+# Long functions are acceptable for setup/init code
+too_many_lines = "allow"
+# Bevy query types are inherently complex
+type_complexity = "allow"
+# Module naming follows Bevy plugin conventions
+module_name_repetitions = "allow"
+# Wildcard imports are idiomatic for bevy::prelude::*
+wildcard_imports = "allow"
+# Missing docs are acceptable for this application crate
+missing_docs_in_private_items = "allow"
+# Missing errors doc not applicable for most Bevy system functions
+missing_errors_doc = "allow"
+missing_panics_doc = "allow"
+# multiple_crate_versions is common with large dependency trees like Bevy
+multiple_crate_versions = "allow"
+# ObjC interop requires unsafe Send/Sync impls with non-Send fields
+non_send_fields_in_send_ty = "allow"
+# u32 as i32 wrapping is acceptable for small constants
+cast_possible_wrap = "allow"
+# same_name_method is triggered by ObjC declare_class! macro
+same_name_method = "allow"
+# cargo_common_metadata fields like keywords/categories are optional for apps
+cargo_common_metadata = "allow"
+# collection_is_never_read false positive: collections kept alive for side effects
+collection_is_never_read = "allow"
+
+[lints]
+workspace = true
 
 # Enable optimization in debug mode
 [profile.dev]

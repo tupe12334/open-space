@@ -1,3 +1,9 @@
+// Bevy and ObjC interop require significant unsafe code throughout this crate.
+#![allow(
+    clippy::undocumented_unsafe_blocks,
+    reason = "ObjC interop requires pervasive unsafe throughout this crate"
+)]
+
 mod camera;
 mod debug;
 mod hmd;
@@ -14,7 +20,7 @@ use bevy::{
 use camera::CameraPlugin;
 use debug::DebugPlugin;
 use hmd::HmdPlugin;
-use screen_capture::ScreenCapturePlugin;
+use screen_capture::{ensure_screen_capture_permission, ScreenCapturePlugin};
 use settings::SettingsPlugin;
 use stage::StagePlugin;
 use virtual_display::VirtualDisplayPlugin;
@@ -24,9 +30,45 @@ pub struct ScaleFactor {
     pub value: f64,
 }
 
+fn wait_for_physical_display_modes() {
+    use std::time::{Duration, Instant};
+    let timeout = Duration::from_secs(10);
+    let poll_interval = Duration::from_millis(50);
+    let start = Instant::now();
+
+    loop {
+        let all = stage::get_active_displays(32);
+        let missing: Vec<u32> = all
+            .iter()
+            .filter(|(_, cg)| cg.copy_display_modes().is_none())
+            .map(|(id, _)| *id)
+            .collect();
+
+        if missing.is_empty() {
+            eprintln!(
+                "All physical display modes ready after {:.0?}",
+                start.elapsed()
+            );
+            break;
+        }
+        if start.elapsed() > timeout {
+            eprintln!("Timed out waiting for physical display modes on: {missing:?}");
+            break;
+        }
+        std::thread::sleep(poll_interval);
+    }
+}
+
 fn main() {
+    ensure_screen_capture_permission();
+    wait_for_physical_display_modes();
+
+    // Load settings once, before anything else needs them.
+    let settings = settings::load_settings();
+
     App::new()
         .insert_resource(ScaleFactor { value: 1.0 })
+        .insert_resource(settings)
         .add_plugins(DefaultPlugins.set(WindowPlugin {
             primary_window: Some(Window {
                 // https://docs.rs/bevy_window/latest/bevy_window/enum.PresentMode.html

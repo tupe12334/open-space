@@ -17,11 +17,11 @@ extern "C" {
     fn CGGetActiveDisplayList(max: u32, displays: *mut u32, count: *mut u32) -> i32;
 }
 
-/// Returns (display_id, CGDisplay) pairs for active displays, up to `max`.
+/// Returns (`display_id`, `CGDisplay`) pairs for active displays, up to `max`.
 pub fn get_active_displays(max: usize) -> Vec<(u32, CGDisplay)> {
-    let mut ids = vec![0u32; max];
-    let mut count = 0u32;
-    let err = unsafe { CGGetActiveDisplayList(max as u32, ids.as_mut_ptr(), &mut count) };
+    let mut ids = vec![0_u32; max];
+    let mut count = 0_u32;
+    let err = unsafe { CGGetActiveDisplayList(max as u32, ids.as_mut_ptr(), &raw mut count) };
     if err != 0 {
         return vec![];
     }
@@ -32,8 +32,8 @@ pub fn get_active_displays(max: usize) -> Vec<(u32, CGDisplay)> {
 #[derive(Resource)]
 pub struct AssetHandles {
     pub screens: Vec<Handle<Image>>,
-    /// CGDirectDisplayID for each screen, in the same order as `screens`.
-    #[allow(dead_code)]
+    /// `CGDirectDisplayID` for each screen, in the same order as `screens`.
+    #[allow(dead_code, reason = "reserved for future display routing")]
     pub display_ids: Vec<u32>,
 }
 
@@ -120,18 +120,10 @@ fn spawn_screen(
 
     // Collect (display_id, pixel_width, pixel_height) from virtual or physical displays
     let vd = virtual_displays.displays();
-    let screen_specs: Vec<(u32, u32, u32)> = if !vd.is_empty() {
-        vd.iter()
-            .map(|d| {
-                let w = (d.width as f64 * scale_factor.value).round() as u32;
-                let h = (d.height as f64 * scale_factor.value).round() as u32;
-                (d.display_id, w, h)
-            })
-            .collect()
-    } else {
+    let screen_specs: Vec<(u32, u32, u32)> = if vd.is_empty() {
         let physical = get_active_displays(2);
         let physical = if physical.is_empty() {
-            vec![(0u32, CGDisplay::main())]
+            vec![(0_u32, CGDisplay::main())]
         } else {
             physical
         };
@@ -143,6 +135,14 @@ fn spawn_screen(
                 (*id, w, h)
             })
             .collect()
+    } else {
+        vd.iter()
+            .map(|d| {
+                let w = (d.width as f64 * scale_factor.value).round() as u32;
+                let h = (d.height as f64 * scale_factor.value).round() as u32;
+                (d.display_id, w, h)
+            })
+            .collect()
     };
 
     info!("Spawning {} screen(s)", screen_specs.len());
@@ -152,8 +152,6 @@ fn spawn_screen(
 
     let mut screen_handles: Vec<Handle<Image>> = Vec::new();
     let mut display_ids: Vec<u32> = Vec::new();
-    let _total = screen_specs.len();
-
     for (i, &(display_id, width, height)) in screen_specs.iter().enumerate() {
         let mut screen_texture = Image::new(
             Extent3d {
