@@ -84,6 +84,9 @@ deref_into_dyn_supertrait = "deny"
 impl_trait_overcaptures = "deny"
 rust_2024_incompatible_pat = "deny"
 if_let_rescope = "deny"
+rust_2024_guarded_string_incompatible_syntax = "deny"
+rust_2024_prelude_collisions = "deny"
+rust_2021_prelude_collisions = "deny"
 
 [workspace.lints.clippy]
 # Pedantic: catches subtle bugs and enforces idiomatic Rust
