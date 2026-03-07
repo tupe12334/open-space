@@ -134,7 +134,9 @@ fn save_settings(settings: &AppSettings) {
         "num_screens": settings.num_screens,
     });
     if let Ok(data) = serde_json::to_string_pretty(&val) {
-        let _ = fs::write(settings_path(), data);
+        if let Err(e) = fs::write(settings_path(), data) {
+            eprintln!("Failed to write settings: {e}");
+        }
     }
 }
 
