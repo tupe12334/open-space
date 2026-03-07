@@ -142,6 +142,7 @@ unseparated_literal_suffix = "deny"
 unused_trait_names = "deny"
 verbose_file_reads = "deny"
 wildcard_enum_match_arm = "deny"
+unused_result_ok = "deny"
 
 # Intentionally allowed pedantic/nursery lints with justification:
 # This crate heavily uses Bevy and ObjC interop which requires many unsafe casts
