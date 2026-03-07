@@ -164,6 +164,7 @@ shadow_same = "deny"
 shadow_unrelated = "deny"
 alloc_instead_of_core = "deny"
 single_char_lifetime_names = "deny"
+missing_inline_in_public_items = "deny"
 exhaustive_enums = "deny"
 exhaustive_structs = "deny"
 
