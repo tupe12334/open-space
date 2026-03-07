@@ -1,4 +1,3 @@
-use bevy::ecs::system::NonSend;
 use bevy::prelude::*;
 use objc2::msg_send;
 use objc2::runtime::{AnyClass, AnyObject};

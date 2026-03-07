@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use bevy::window::{Monitor, MonitorSelection, PrimaryMonitor, PrimaryWindow, WindowMode};
+use bevy::window::{Monitor, PrimaryMonitor, PrimaryWindow, WindowMode};
 use std::sync::atomic::Ordering;
 
 use super::{

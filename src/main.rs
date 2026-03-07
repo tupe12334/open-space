@@ -8,7 +8,7 @@ mod modules;
 
 use bevy::{
     prelude::*,
-    window::{MonitorSelection, PresentMode, WindowMode, WindowPosition},
+    window::{PresentMode, WindowMode},
 };
 
 use modules::btop::BtopPlugin;
