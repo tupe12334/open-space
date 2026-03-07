@@ -165,6 +165,7 @@ shadow_unrelated = "deny"
 alloc_instead_of_core = "deny"
 single_char_lifetime_names = "deny"
 exhaustive_enums = "deny"
+exhaustive_structs = "deny"
 
 # Intentionally allowed pedantic/nursery lints with justification:
 # This crate heavily uses Bevy and ObjC interop which requires many unsafe casts

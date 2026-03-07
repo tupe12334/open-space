@@ -22,6 +22,7 @@ use modules::virtual_display::VirtualDisplayPlugin;
 use modules::webcam_distance::{ensure_camera_permission, WebcamDistancePlugin};
 
 #[derive(Resource)]
+#[non_exhaustive]
 pub struct ScaleFactor {
     pub value: f64,
 }
