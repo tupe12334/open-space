@@ -24,38 +24,9 @@ pub struct ScaleFactor {
     pub value: f64,
 }
 
-fn wait_for_physical_display_modes() {
-    use std::time::{Duration, Instant};
-    let timeout = Duration::from_secs(10);
-    let poll_interval = Duration::from_millis(50);
-    let start = Instant::now();
-
-    loop {
-        let all = modules::stage::get_active_displays(32);
-        let missing: Vec<u32> = all
-            .iter()
-            .filter(|(_, cg)| cg.copy_display_modes().is_none())
-            .map(|(id, _)| *id)
-            .collect();
-
-        if missing.is_empty() {
-            eprintln!(
-                "All physical display modes ready after {:.0?}",
-                start.elapsed()
-            );
-            break;
-        }
-        if start.elapsed() > timeout {
-            eprintln!("Timed out waiting for physical display modes on: {missing:?}");
-            break;
-        }
-        std::thread::sleep(poll_interval);
-    }
-}
-
 fn main() {
     ensure_screen_capture_permission();
-    wait_for_physical_display_modes();
+    modules::display_modes::wait_for_physical_display_modes();
 
     // Load settings once, before anything else needs them.
     let settings = modules::settings::load_settings();

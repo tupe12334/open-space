@@ -56,15 +56,15 @@ impl MenuHandler {
 }
 
 #[derive(Resource)]
-#[expect(dead_code, reason = "menu bar setup temporarily disabled")]
-struct NativeMenuHandler(objc2::rc::Id<MenuHandler>);
+struct NativeMenuHandler(
+    #[expect(dead_code, reason = "held to prevent deallocation")] objc2::rc::Id<MenuHandler>,
+);
 
 // SAFETY: MenuHandler only modifies global atomics and is stored
 // solely to prevent deallocation. It is never accessed from Bevy threads.
 unsafe impl Send for NativeMenuHandler {}
 unsafe impl Sync for NativeMenuHandler {}
 
-#[expect(dead_code, reason = "menu bar setup temporarily disabled")]
 pub(super) fn setup_menu_bar(mut commands: Commands) {
     let handler = MenuHandler::new();
 
