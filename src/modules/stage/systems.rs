@@ -46,7 +46,7 @@ pub(super) fn spawn_screen(
 
     // Collect (display_id, pixel_width, pixel_height) from virtual or physical displays
     let vd = virtual_displays.displays();
-    let screen_specs: Vec<(u32, u32, u32)> = if vd.is_empty() {
+    let mut screen_specs: Vec<(u32, u32, u32)> = if vd.is_empty() {
         let physical = get_active_displays(2);
         let physical = if physical.is_empty() {
             vec![(0_u32, CGDisplay::main())]
@@ -70,6 +70,28 @@ pub(super) fn spawn_screen(
             })
             .collect()
     };
+
+    // Always include the main Mac display
+    let main_display = CGDisplay::main();
+    let main_id = main_display.id;
+    if !screen_specs.iter().any(|(id, _, _)| *id == main_id) {
+        let main_w = (main_display.pixels_wide() as f64 * scale_factor.value).round() as u32;
+        let main_h = (main_display.pixels_high() as f64 * scale_factor.value).round() as u32;
+        screen_specs.push((main_id, main_w, main_h));
+    }
+
+    // Reorder so the main Mac display is at the center of the grid
+    if screen_specs.len() > 1 {
+        if let Some(main_idx) = screen_specs.iter().position(|(id, _, _)| *id == main_id) {
+            let cols = 3_usize;
+            let n = screen_specs.len();
+            let total_rows = n.div_ceil(cols);
+            let center_col = cols / 2;
+            let center_row = total_rows / 2;
+            let center_idx = (center_row * cols + center_col).min(n - 1);
+            screen_specs.swap(main_idx, center_idx);
+        }
+    }
 
     info!("Spawning {} screen(s)", screen_specs.len());
     for (id, w, h) in &screen_specs {

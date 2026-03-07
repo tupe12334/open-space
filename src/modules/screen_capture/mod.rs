@@ -8,6 +8,7 @@ use std::sync::Arc;
 
 use bevy::prelude::*;
 use core_foundation::base::TCFType as _;
+use core_graphics2::display::CGDisplay;
 use core_media::sample_buffer::{CMSampleBuffer, CMSampleBufferRef};
 use core_video::pixel_buffer::{
     kCVPixelBufferLock_ReadOnly, kCVPixelFormatType_32BGRA, CVPixelBuffer,
@@ -180,7 +181,7 @@ pub(super) fn setup_screen_capture(
 
     // Collect (display_id, capture_width, capture_height)
     let vd = virtual_displays.displays();
-    let display_specs: Vec<(u32, usize, usize)> = if vd.is_empty() {
+    let mut display_specs: Vec<(u32, usize, usize)> = if vd.is_empty() {
         get_active_displays(2)
             .iter()
             .map(|(id, d)| {
@@ -198,6 +199,28 @@ pub(super) fn setup_screen_capture(
             })
             .collect()
     };
+
+    // Always include the main Mac display
+    let main_display = CGDisplay::main();
+    let main_id = main_display.id;
+    if !display_specs.iter().any(|(id, _, _)| *id == main_id) {
+        let main_w = (main_display.pixels_wide() as f64 * scale_factor.value) as usize;
+        let main_h = (main_display.pixels_high() as f64 * scale_factor.value) as usize;
+        display_specs.push((main_id, main_w, main_h));
+    }
+
+    // Reorder so the main Mac display is at the center of the grid
+    if display_specs.len() > 1 {
+        if let Some(main_idx) = display_specs.iter().position(|(id, _, _)| *id == main_id) {
+            let cols = 3_usize;
+            let n = display_specs.len();
+            let total_rows = n.div_ceil(cols);
+            let center_col = cols / 2;
+            let center_row = total_rows / 2;
+            let center_idx = (center_row * cols + center_col).min(n - 1);
+            display_specs.swap(main_idx, center_idx);
+        }
+    }
 
     #[expect(
         clippy::infinite_loop,
