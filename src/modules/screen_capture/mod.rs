@@ -32,7 +32,7 @@ use screen_capture_kit::{
 };
 use tokio::sync::mpsc::{self, Receiver, Sender};
 
-use crate::modules::grid_layout::center_main_display;
+use crate::modules::grid_layout::{center_main_display, DISPLAY_HEIGHT, DISPLAY_WIDTH};
 use crate::modules::stage::{get_active_displays, AssetHandles};
 use crate::modules::virtual_display::VirtualDisplays;
 use crate::ScaleFactor;
@@ -201,13 +201,11 @@ pub(super) fn setup_screen_capture(
             .collect()
     };
 
-    // Always include the main Mac display
+    // Always include the main Mac display at the standard resolution
     let main_display = CGDisplay::main();
     let main_id = main_display.id;
     if !display_specs.iter().any(|(id, _, _)| *id == main_id) {
-        let main_w = (main_display.pixels_wide() as f64 * scale_factor.value) as usize;
-        let main_h = (main_display.pixels_high() as f64 * scale_factor.value) as usize;
-        display_specs.push((main_id, main_w, main_h));
+        display_specs.push((main_id, DISPLAY_WIDTH as usize, DISPLAY_HEIGHT as usize));
     }
 
     // Reorder so the main Mac display is at the center of the grid

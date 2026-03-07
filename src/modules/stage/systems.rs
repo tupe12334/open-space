@@ -7,7 +7,8 @@ use core_graphics2::display::CGDisplay;
 use rand::Rng as _;
 
 use crate::modules::grid_layout::{
-    center_main_display, DISPLAY_ASPECT, DISPLAY_HALF_WIDTH, GRID_COLS,
+    center_main_display, DISPLAY_ASPECT, DISPLAY_HALF_WIDTH, DISPLAY_HEIGHT, DISPLAY_WIDTH,
+    GRID_COLS,
 };
 use crate::modules::settings::AppSettings;
 use crate::modules::virtual_display::VirtualDisplays;
@@ -74,13 +75,11 @@ pub(super) fn spawn_screen(
             .collect()
     };
 
-    // Always include the main Mac display
+    // Always include the main Mac display at the standard resolution
     let main_display = CGDisplay::main();
     let main_id = main_display.id;
     if !screen_specs.iter().any(|(id, _, _)| *id == main_id) {
-        let main_w = (main_display.pixels_wide() as f64 * scale_factor.value).round() as u32;
-        let main_h = (main_display.pixels_high() as f64 * scale_factor.value).round() as u32;
-        screen_specs.push((main_id, main_w, main_h));
+        screen_specs.push((main_id, DISPLAY_WIDTH, DISPLAY_HEIGHT));
     }
 
     // Reorder so the main Mac display is at the center of the grid
