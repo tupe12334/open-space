@@ -44,6 +44,10 @@ cargo-husky = { version = "1", default-features = false, features = ["user-hooks
 [workspace]
 resolver = "2"
 
+[workspace.lints.rust]
+# Compiler lints promoted to deny
+trivial_numeric_casts = "deny"
+
 [workspace.lints.clippy]
 # Pedantic: catches subtle bugs and enforces idiomatic Rust
 pedantic = { level = "deny", priority = -1 }

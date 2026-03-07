@@ -304,8 +304,8 @@ fn setup_screen_capture(
                 &NSArray::new(),
             );
 
-            let capture_width = cap_w as size_t;
-            let capture_height = cap_h as size_t;
+            let capture_width: size_t = cap_w;
+            let capture_height: size_t = cap_h;
             let configuration: Id<SCStreamConfiguration> = SCStreamConfiguration::new();
             configuration.set_width(capture_width);
             configuration.set_height(capture_height);
