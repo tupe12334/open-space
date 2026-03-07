@@ -66,6 +66,7 @@ cargo = { level = "deny", priority = -1 }
 # Selected restriction lints (enabling all restriction lints conflicts with pedantic)
 allow_attributes_without_reason = "deny"
 as_underscore = "deny"
+assertions_on_result_states = "deny"
 cfg_not_test = "deny"
 clone_on_ref_ptr = "deny"
 create_dir = "deny"
