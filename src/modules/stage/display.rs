@@ -2,7 +2,7 @@ use core_graphics2::display::CGDisplay;
 
 // Binding to the macOS CoreGraphics C function that retrieves currently active (online) displays.
 // See: https://developer.apple.com/documentation/coregraphics/1454603-cggetactivedisplaylist
-extern "C" {
+unsafe extern "C" {
     /// Populates `displays` with up to `max` active display IDs and writes the actual count to `count`.
     /// Returns 0 (`kCGErrorSuccess`) on success, or a non-zero error code on failure.
     fn CGGetActiveDisplayList(max: u32, displays: *mut u32, count: *mut u32) -> i32;

@@ -20,10 +20,10 @@ use objc2_foundation::{NSError, NSObject, NSObjectProtocol, NSString};
 use types::DistanceStore;
 
 #[link(name = "AVFoundation", kind = "framework")]
-extern "C" {}
+unsafe extern "C" {}
 
 #[link(name = "Vision", kind = "framework")]
-extern "C" {}
+unsafe extern "C" {}
 
 pub(crate) struct CameraDelegateIvars {
     distance: Arc<Mutex<Option<f32>>>,
@@ -71,7 +71,7 @@ declare_class!(
 );
 
 // CoreMedia / CoreVideo C functions
-extern "C" {
+unsafe extern "C" {
     fn CMSampleBufferGetImageBuffer(sbuf: *mut c_void) -> *mut c_void;
     fn CVPixelBufferGetWidth(pixel_buffer: *mut c_void) -> usize;
 }

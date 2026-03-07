@@ -11,7 +11,7 @@ use objc2_foundation::{CGSize, NSString};
 use crate::modules::grid_layout::{grid_center_index, grid_position_name, GRID_COLS};
 use crate::modules::settings::AppSettings;
 
-extern "C" {
+unsafe extern "C" {
     fn dispatch_queue_create(
         label: *const std::ffi::c_char,
         attr: *const std::ffi::c_void,
