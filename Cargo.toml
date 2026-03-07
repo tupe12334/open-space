@@ -157,6 +157,7 @@ mutex_integer = "deny"
 non_ascii_literal = "deny"
 else_if_without_else = "deny"
 pub_use = "deny"
+shadow_same = "deny"
 
 # Intentionally allowed pedantic/nursery lints with justification:
 # This crate heavily uses Bevy and ObjC interop which requires many unsafe casts
