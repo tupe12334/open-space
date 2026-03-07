@@ -82,6 +82,8 @@ deprecated_safe_2024 = "deny"
 unsafe_attr_outside_unsafe = "deny"
 deref_into_dyn_supertrait = "deny"
 impl_trait_overcaptures = "deny"
+rust_2024_incompatible_pat = "deny"
+if_let_rescope = "deny"
 
 [workspace.lints.clippy]
 # Pedantic: catches subtle bugs and enforces idiomatic Rust
