@@ -109,6 +109,7 @@ unneeded_field_pattern = "deny"
 unseparated_literal_suffix = "deny"
 verbose_file_reads = "deny"
 wildcard_enum_match_arm = "deny"
+semicolon_inside_block = "deny"
 
 # Intentionally allowed pedantic/nursery lints with justification:
 # This crate heavily uses Bevy and ObjC interop which requires many unsafe casts
