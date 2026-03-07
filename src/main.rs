@@ -8,7 +8,7 @@ mod modules;
 
 use bevy::{
     prelude::*,
-    window::{PresentMode, WindowMode},
+    window::{MonitorSelection, PresentMode, WindowMode, WindowPosition},
 };
 
 use modules::btop::BtopPlugin;
@@ -47,7 +47,11 @@ fn main() {
                 focused: false,
                 visible: true,
                 // window_level: WindowLevel::AlwaysOnTop,
-                mode: WindowMode::Windowed,
+                // Start fullscreen on the primary monitor so the window never lands
+                // on a virtual display. select_glasses_fullscreen will move it to
+                // the Air display once detected.
+                mode: WindowMode::BorderlessFullscreen(MonitorSelection::Primary),
+                position: WindowPosition::At(IVec2::ZERO),
                 ..default()
             }),
             ..default()
