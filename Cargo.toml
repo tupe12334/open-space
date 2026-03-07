@@ -94,6 +94,8 @@ rust_2021_prefixes_incompatible_syntax = "deny"
 linker_messages = "deny"
 
 [workspace.lints.clippy]
+# All: correctness, suspicious, style, complexity, perf — promoted from warn to deny
+all = { level = "deny", priority = -2 }
 # Pedantic: catches subtle bugs and enforces idiomatic Rust
 pedantic = { level = "deny", priority = -1 }
 # Nursery: early detection of newer lint patterns
