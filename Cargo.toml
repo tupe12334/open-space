@@ -113,6 +113,7 @@ semicolon_inside_block = "deny"
 unnecessary_safety_comment = "deny"
 unnecessary_safety_doc = "deny"
 partial_pub_fields = "deny"
+filetype_is_file = "deny"
 
 # Intentionally allowed pedantic/nursery lints with justification:
 # This crate heavily uses Bevy and ObjC interop which requires many unsafe casts
