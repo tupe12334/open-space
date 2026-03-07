@@ -64,6 +64,7 @@ nursery = { level = "deny", priority = -1 }
 cargo = { level = "deny", priority = -1 }
 
 # Selected restriction lints (enabling all restriction lints conflicts with pedantic)
+allow_attributes = "deny"
 allow_attributes_without_reason = "deny"
 as_underscore = "deny"
 assertions_on_result_states = "deny"
@@ -131,6 +132,7 @@ unnecessary_safety_doc = "deny"
 unnecessary_self_imports = "deny"
 unneeded_field_pattern = "deny"
 unseparated_literal_suffix = "deny"
+unused_trait_names = "deny"
 verbose_file_reads = "deny"
 wildcard_enum_match_arm = "deny"
 

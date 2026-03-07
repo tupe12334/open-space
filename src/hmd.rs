@@ -1,7 +1,7 @@
 use std::sync::atomic::Ordering;
 use std::sync::{Arc, Mutex};
 
-use ahrs::{Ahrs, Madgwick};
+use ahrs::{Ahrs as _, Madgwick};
 use bevy::prelude::*;
 use nalgebra::Vector3;
 

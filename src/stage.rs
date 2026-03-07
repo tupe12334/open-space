@@ -4,7 +4,7 @@ use bevy::{
     render::render_resource::{Extent3d, TextureDimension, TextureFormat, TextureUsages},
 };
 use core_graphics2::display::CGDisplay;
-use rand::Rng;
+use rand::Rng as _;
 
 use crate::settings::AppSettings;
 use crate::virtual_display::VirtualDisplays;
@@ -33,7 +33,7 @@ pub fn get_active_displays(max: usize) -> Vec<(u32, CGDisplay)> {
 pub struct AssetHandles {
     pub screens: Vec<Handle<Image>>,
     /// `CGDirectDisplayID` for each screen, in the same order as `screens`.
-    #[allow(dead_code, reason = "reserved for future display routing")]
+    #[expect(dead_code, reason = "reserved for future display routing")]
     pub display_ids: Vec<u32>,
 }
 

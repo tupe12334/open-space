@@ -1,12 +1,12 @@
 use std::sync::Arc;
 
 use bevy::prelude::*;
-use core_foundation::base::TCFType;
+use core_foundation::base::TCFType as _;
 use core_media::sample_buffer::{CMSampleBuffer, CMSampleBufferRef};
 use core_video::pixel_buffer::{
     kCVPixelBufferLock_ReadOnly, kCVPixelFormatType_32BGRA, CVPixelBuffer,
 };
-use dispatch2::{DispatchObject, DispatchQueue, DispatchQueueAttr};
+use dispatch2::{DispatchObject as _, DispatchQueue, DispatchQueueAttr};
 use libc::size_t;
 use objc2::mutability;
 use objc2::{
@@ -238,7 +238,7 @@ fn setup_screen_capture(
             .collect()
     };
 
-    #[allow(
+    #[expect(
         clippy::infinite_loop,
         reason = "capture thread intentionally runs forever"
     )]

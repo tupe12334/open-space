@@ -85,7 +85,7 @@ impl MenuHandler {
 
 #[derive(Resource)]
 struct NativeMenuHandler(
-    #[allow(dead_code, reason = "stored to prevent deallocation, never read")]
+    #[expect(dead_code, reason = "stored to prevent deallocation, never read")]
     objc2::rc::Id<MenuHandler>,
 );
 
