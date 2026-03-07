@@ -1,5 +1,7 @@
 //! Spatial display application using virtual displays and AR glasses.
 
+#![deny(warnings)]
+
 // Bevy and ObjC interop require significant unsafe code throughout this crate.
 #![allow(
     clippy::undocumented_unsafe_blocks,
