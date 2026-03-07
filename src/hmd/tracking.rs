@@ -5,9 +5,19 @@ use ar_drivers::{any_glasses, GlassesEvent};
 use bevy::prelude::*;
 use dcmimu::DCMIMU;
 
+/// Stores the initial IMU orientation captured at startup, used to zero-out
+/// the camera so "wherever you look when the app starts" becomes forward.
+#[derive(Clone, Copy)]
+pub(super) struct CalibrationOffset {
+    pub(super) yaw: f32,
+    pub(super) pitch: f32,
+    pub(super) roll: f32,
+}
+
 #[derive(Resource)]
 pub(super) struct ImuStore {
     pub(super) dcmimu: Arc<Mutex<DCMIMU>>,
+    pub(super) calibration: Arc<Mutex<Option<CalibrationOffset>>>,
 }
 
 /// Initializes HMD (Head-Mounted Display) motion tracking in a separate thread
@@ -23,8 +33,13 @@ pub(super) struct ImuStore {
 /// 4. Calculates time delta between measurements for accurate integration
 ///
 /// The motion data is used to update camera orientation in the main rendering thread.
+/// Number of IMU samples to process before capturing the calibration offset.
+/// This gives the DCMIMU filter time to converge on a stable orientation.
+const CALIBRATION_SAMPLES: u32 = 100;
+
 pub(super) fn start_tracking(imu_store: Res<ImuStore>) {
     let shared_dcmimu_clone = Arc::clone(&imu_store.dcmimu);
+    let calibration_clone = Arc::clone(&imu_store.calibration);
 
     #[expect(
         clippy::infinite_loop,
@@ -38,12 +53,8 @@ pub(super) fn start_tracking(imu_store: Res<ImuStore>) {
                 return;
             }
         };
-        // println!("Got glasses, serial={}", glasses.serial().unwrap());
         let mut last_timestamp: Option<u64> = None;
-
-        // use std::time::{Duration, Instant};
-        // let mut last_print_time = Instant::now();
-        // let mut loop_counter = 0;
+        let mut sample_count: u32 = 0;
 
         loop {
             if let GlassesEvent::AccGyro {
@@ -55,24 +66,30 @@ pub(super) fn start_tracking(imu_store: Res<ImuStore>) {
                 if let Some(last_timestamp) = last_timestamp {
                     let dt = (timestamp - last_timestamp) as f32 / 1_000_000.0; // in seconds
 
-                    shared_dcmimu_clone.lock().unwrap().update(
+                    let mut dcmimu = shared_dcmimu_clone.lock().unwrap();
+                    dcmimu.update(
                         (gyroscope.x, gyroscope.y, gyroscope.z),
                         (accelerometer.x, accelerometer.y, accelerometer.z),
-                        // (0., 0., 0.), // set accel to 0 to disable prediction
                         dt,
                     );
+
+                    sample_count += 1;
+
+                    // Capture calibration offset once the filter has stabilized
+                    if sample_count == CALIBRATION_SAMPLES {
+                        let orientation = dcmimu.all();
+                        drop(dcmimu);
+                        *calibration_clone.lock().unwrap() = Some(CalibrationOffset {
+                            yaw: orientation.yaw,
+                            pitch: orientation.pitch,
+                            roll: orientation.roll,
+                        });
+                        info!("IMU calibration captured after {CALIBRATION_SAMPLES} samples");
+                    }
                 }
 
                 last_timestamp = Some(timestamp);
             }
-
-            // loop_counter += 1;
-
-            // if last_print_time.elapsed() > Duration::from_secs(1) {
-            //     println!("Loop has run {} times in the last second", loop_counter);
-            //     loop_counter = 0;
-            //     last_print_time = Instant::now();
-            // }
         }
     });
 }
@@ -92,15 +109,17 @@ pub(super) fn update_camera_orientation(
     mut query: Query<&mut Transform, With<Camera>>,
     state: Res<ImuStore>,
 ) {
-    let dcm = state.dcmimu.lock().unwrap().all();
+    let Some(cal) = *state.calibration.lock().unwrap() else {
+        return; // Not calibrated yet — keep the default camera orientation
+    };
 
-    // println!("DCM: {:?}", dcm);
+    let dcm = state.dcmimu.lock().unwrap().all();
 
     let rot = Transform::from_rotation(Quat::from_euler(
         EulerRot::YXZ,
-        dcm.yaw,
-        -dcm.roll,
-        -dcm.pitch,
+        dcm.yaw - cal.yaw,
+        -(dcm.roll - cal.roll),
+        -(dcm.pitch - cal.pitch),
     ));
 
     for mut transform in &mut query {
