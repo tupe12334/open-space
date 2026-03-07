@@ -19,8 +19,8 @@ extern "C" {
 
 /// Returns (`display_id`, `CGDisplay`) pairs for active displays, up to `max`.
 pub fn get_active_displays(max: usize) -> Vec<(u32, CGDisplay)> {
-    let mut ids = vec![0u32; max];
-    let mut count = 0u32;
+    let mut ids = vec![0_u32; max];
+    let mut count = 0_u32;
     let err = unsafe { CGGetActiveDisplayList(max as u32, ids.as_mut_ptr(), &raw mut count) };
     if err != 0 {
         return vec![];
@@ -123,7 +123,7 @@ fn spawn_screen(
     let screen_specs: Vec<(u32, u32, u32)> = if vd.is_empty() {
         let physical = get_active_displays(2);
         let physical = if physical.is_empty() {
-            vec![(0u32, CGDisplay::main())]
+            vec![(0_u32, CGDisplay::main())]
         } else {
             physical
         };

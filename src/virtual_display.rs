@@ -89,9 +89,9 @@ fn create_virtual_displays_system(
     settings: Res<AppSettings>,
 ) {
     let count = settings.num_screens as usize;
-    let width = 1920u32;
-    let height = 1080u32;
-    let refresh_rate = 60.0f64;
+    let width = 1920_u32;
+    let height = 1080_u32;
+    let refresh_rate = 60.0_f64;
 
     let descriptor_cls = AnyClass::get("CGVirtualDisplayDescriptor")
         .expect("CGVirtualDisplayDescriptor class not found");
@@ -110,8 +110,8 @@ fn create_virtual_displays_system(
             let _: () = msg_send![descriptor, setName: &*name];
             let _: () = msg_send![descriptor, setMaxPixelsWide: width];
             let _: () = msg_send![descriptor, setMaxPixelsHigh: height];
-            let _: () = msg_send![descriptor, setProductID: 0x1234u32];
-            let _: () = msg_send![descriptor, setVendorID: 0x5678u32];
+            let _: () = msg_send![descriptor, setProductID: 0x1234_u32];
+            let _: () = msg_send![descriptor, setVendorID: 0x5678_u32];
             let _: () = msg_send![descriptor, setSerialNum: i as u32];
 
             let size = CGSize::new(600.0, 340.0);
@@ -129,7 +129,7 @@ fn create_virtual_displays_system(
             let settings = alloc_init(settings_cls);
             let modes: *const AnyObject = msg_send![nsarray_cls, arrayWithObject: mode];
             let _: () = msg_send![settings, setModes: modes];
-            let _: () = msg_send![settings, setHiDPI: 0u32];
+            let _: () = msg_send![settings, setHiDPI: 0_u32];
 
             let display: *const AnyObject = msg_send![display_cls, alloc];
             let display: *const AnyObject = msg_send![display, initWithDescriptor: descriptor];
