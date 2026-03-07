@@ -103,6 +103,7 @@ deref_by_slicing = "deny"
 large_include_file = "deny"
 multiple_inherent_impl = "deny"
 wildcard_enum_match_arm = "deny"
+string_lit_chars_any = "deny"
 
 # Intentionally allowed pedantic/nursery lints with justification:
 # This crate heavily uses Bevy and ObjC interop which requires many unsafe casts
