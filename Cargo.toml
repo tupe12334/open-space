@@ -91,6 +91,7 @@ clone_on_ref_ptr = "deny"
 empty_drop = "deny"
 map_err_ignore = "deny"
 renamed_function_params = "deny"
+deref_by_slicing = "deny"
 
 # Intentionally allowed pedantic/nursery lints with justification:
 # This crate heavily uses Bevy and ObjC interop which requires many unsafe casts
