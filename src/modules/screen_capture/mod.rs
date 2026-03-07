@@ -25,8 +25,8 @@ use screen_capture_kit::{
 };
 use tokio::sync::mpsc::{self, Receiver, Sender};
 
-use crate::stage::{get_active_displays, AssetHandles};
-use crate::virtual_display::VirtualDisplays;
+use crate::modules::stage::{get_active_displays, AssetHandles};
+use crate::modules::virtual_display::VirtualDisplays;
 use crate::ScaleFactor;
 
 extern "C" {
@@ -65,7 +65,7 @@ impl Plugin for ScreenCapturePlugin {
     fn build(&self, app: &mut App) {
         let num_screens = app
             .world()
-            .get_resource::<crate::settings::AppSettings>()
+            .get_resource::<crate::modules::settings::AppSettings>()
             .map_or(6, |s| s.num_screens as usize);
         let mut senders = Vec::new();
         let mut receivers = Vec::new();

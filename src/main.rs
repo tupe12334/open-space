@@ -4,26 +4,20 @@
     reason = "ObjC interop requires pervasive unsafe throughout this crate"
 )]
 
-mod camera;
-mod debug;
-mod hmd;
-mod screen_capture;
-mod settings;
-mod stage;
-mod virtual_display;
+mod modules;
 
 use bevy::{
     prelude::*,
     window::{PresentMode, WindowMode},
 };
 
-use camera::CameraPlugin;
-use debug::DebugPlugin;
-use hmd::HmdPlugin;
-use screen_capture::{ensure_screen_capture_permission, ScreenCapturePlugin};
-use settings::SettingsPlugin;
-use stage::StagePlugin;
-use virtual_display::VirtualDisplayPlugin;
+use modules::camera::CameraPlugin;
+use modules::debug::DebugPlugin;
+use modules::hmd::HmdPlugin;
+use modules::screen_capture::{ensure_screen_capture_permission, ScreenCapturePlugin};
+use modules::settings::SettingsPlugin;
+use modules::stage::StagePlugin;
+use modules::virtual_display::VirtualDisplayPlugin;
 
 #[derive(Resource)]
 pub struct ScaleFactor {
@@ -37,7 +31,7 @@ fn wait_for_physical_display_modes() {
     let start = Instant::now();
 
     loop {
-        let all = stage::get_active_displays(32);
+        let all = modules::stage::get_active_displays(32);
         let missing: Vec<u32> = all
             .iter()
             .filter(|(_, cg)| cg.copy_display_modes().is_none())
@@ -64,7 +58,7 @@ fn main() {
     wait_for_physical_display_modes();
 
     // Load settings once, before anything else needs them.
-    let settings = settings::load_settings();
+    let settings = modules::settings::load_settings();
 
     App::new()
         .insert_resource(ScaleFactor { value: 1.0 })

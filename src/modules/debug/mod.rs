@@ -4,8 +4,8 @@ use bevy::{
     window::Monitor,
 };
 
-use crate::camera::MainCamera;
-use crate::stage::{AssetHandles, ScreenMarker};
+use crate::modules::camera::MainCamera;
+use crate::modules::stage::{AssetHandles, ScreenMarker};
 
 pub(crate) struct DebugPlugin;
 

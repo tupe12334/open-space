@@ -6,8 +6,8 @@ use bevy::{
 use core_graphics2::display::CGDisplay;
 use rand::Rng as _;
 
-use crate::settings::AppSettings;
-use crate::virtual_display::VirtualDisplays;
+use crate::modules::settings::AppSettings;
+use crate::modules::virtual_display::VirtualDisplays;
 use crate::ScaleFactor;
 
 #[derive(Component)]

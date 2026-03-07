@@ -4,7 +4,7 @@ use objc2::msg_send;
 use objc2::runtime::{AnyClass, AnyObject};
 use objc2_foundation::{CGSize, NSString};
 
-use crate::settings::AppSettings;
+use crate::modules::settings::AppSettings;
 
 extern "C" {
     fn dispatch_queue_create(

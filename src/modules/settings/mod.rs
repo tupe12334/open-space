@@ -251,7 +251,7 @@ fn setup_menu_bar(mut commands: Commands) {
 
 fn poll_menu_changes(
     mut settings: ResMut<AppSettings>,
-    mut screen_transforms: Query<&mut Transform, With<crate::stage::ScreenMarker>>,
+    mut screen_transforms: Query<&mut Transform, With<crate::modules::stage::ScreenMarker>>,
 ) {
     let dist_steps = DISTANCE_STEPS.swap(0, Ordering::Relaxed);
     let scr_steps = SCREEN_STEPS.swap(0, Ordering::Relaxed);
