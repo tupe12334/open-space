@@ -84,7 +84,7 @@ impl MenuHandler {
 }
 
 #[derive(Resource)]
-struct NativeMenuHandler(#[allow(dead_code)] objc2::rc::Id<MenuHandler>);
+struct NativeMenuHandler(#[allow(dead_code, reason = "stored to prevent deallocation, never read")] objc2::rc::Id<MenuHandler>);
 
 // SAFETY: MenuHandler only modifies global atomics and is stored
 // solely to prevent deallocation. It is never accessed from Bevy threads.

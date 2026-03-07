@@ -47,7 +47,7 @@ pub struct VirtualDisplayInfo {
 }
 
 impl VirtualDisplays {
-    #[allow(dead_code)]
+    #[allow(dead_code, reason = "public API reserved for future use")]
     pub fn display_ids(&self) -> Vec<u32> {
         self.displays.iter().map(|d| d.display_id).collect()
     }

@@ -238,7 +238,7 @@ fn setup_screen_capture(
             .collect()
     };
 
-    #[allow(clippy::infinite_loop)]
+    #[allow(clippy::infinite_loop, reason = "capture thread intentionally runs forever")]
     std::thread::spawn(move || {
         let (sc_tx, mut sc_rx) = mpsc::channel(1);
         SCShareableContent::get_shareable_content_with_completion_closure(

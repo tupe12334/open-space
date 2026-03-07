@@ -33,7 +33,7 @@ pub fn get_active_displays(max: usize) -> Vec<(u32, CGDisplay)> {
 pub struct AssetHandles {
     pub screens: Vec<Handle<Image>>,
     /// `CGDirectDisplayID` for each screen, in the same order as `screens`.
-    #[allow(dead_code)]
+    #[allow(dead_code, reason = "reserved for future display routing")]
     pub display_ids: Vec<u32>,
 }
 
