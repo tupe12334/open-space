@@ -111,14 +111,14 @@ pub fn load_settings() -> AppSettings {
         if let Ok(val) = serde_json::from_str::<serde_json::Value>(&data) {
             let stage_distance = val
                 .get("stage_distance")
-                .and_then(|v| v.as_f64())
-                .map(|d| d as f32)
-                .unwrap_or(DEFAULT_STAGE_DISTANCE);
+                .and_then(serde_json::Value::as_f64)
+                .map_or(DEFAULT_STAGE_DISTANCE, |d| d as f32);
             let num_screens = val
                 .get("num_screens")
-                .and_then(|v| v.as_u64())
-                .map(|n| (n as u32).clamp(MIN_NUM_SCREENS, MAX_NUM_SCREENS))
-                .unwrap_or(DEFAULT_NUM_SCREENS);
+                .and_then(serde_json::Value::as_u64)
+                .map_or(DEFAULT_NUM_SCREENS, |n| {
+                    (n as u32).clamp(MIN_NUM_SCREENS, MAX_NUM_SCREENS)
+                });
             return AppSettings {
                 stage_distance,
                 num_screens,
@@ -155,7 +155,7 @@ fn setup_menu_bar(mut commands: Commands) {
         let settings_menu: *const AnyObject = msg_send![AnyClass::get("NSMenu").unwrap(), alloc];
         let settings_menu: *const AnyObject = msg_send![settings_menu, initWithTitle: &*menu_title];
 
-        let handler_ptr: *const MenuHandler = &*handler;
+        let handler_ptr: *const MenuHandler = &raw const *handler;
 
         // "Increase Distance" menu item
         let inc_title = NSString::from_str("Increase Distance");

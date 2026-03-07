@@ -5,7 +5,7 @@ use bevy::{
 };
 
 use crate::camera::MainCamera;
-use crate::stage::{AssetHandles, ScreenMarker};
+use crate::stage::ScreenMarker;
 
 pub struct DebugPlugin;
 
@@ -64,27 +64,5 @@ fn debug_transforms(
     }
 
     let monitor_count = monitor_query.iter().count();
-    info!("[DEBUG] Active monitors: {}", monitor_count);
-}
-
-#[allow(dead_code)]
-fn print_position(query: Query<(Entity, &Transform)>) {
-    // Log the entity ID and translation of each entity with a `Position` component.
-    for (entity, transform) in query.iter() {
-        info!(
-            "Entity {:?} is at position {:?},",
-            entity, transform.translation
-        );
-    }
-}
-
-#[allow(dead_code)]
-fn check_asset_handles(asset_server: Res<AssetServer>, asset_handles: Res<AssetHandles>) {
-    for (i, handle) in asset_handles.screens.iter().enumerate() {
-        info!(
-            "AssetStates: screen[{}] {:?}",
-            i,
-            asset_server.get_load_state(handle.id()),
-        );
-    }
+    info!("[DEBUG] Active monitors: {monitor_count}");
 }

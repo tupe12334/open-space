@@ -1,3 +1,6 @@
+// Bevy and ObjC interop require significant unsafe code throughout this crate.
+#![allow(clippy::undocumented_unsafe_blocks)]
+
 mod camera;
 mod debug;
 mod hmd;
@@ -14,10 +17,10 @@ use bevy::{
 use camera::CameraPlugin;
 use debug::DebugPlugin;
 use hmd::HmdPlugin;
-use screen_capture::ScreenCapturePlugin;
+use screen_capture::{ensure_screen_capture_permission, ScreenCapturePlugin};
 use settings::SettingsPlugin;
 use stage::StagePlugin;
-use virtual_display::{create_virtual_displays_blocking, VirtualDisplayPlugin};
+use virtual_display::VirtualDisplayPlugin;
 
 #[derive(Resource)]
 pub struct ScaleFactor {
@@ -46,10 +49,7 @@ fn wait_for_physical_display_modes() {
             break;
         }
         if start.elapsed() > timeout {
-            eprintln!(
-                "Timed out waiting for physical display modes on: {:?}",
-                missing
-            );
+            eprintln!("Timed out waiting for physical display modes on: {missing:?}");
             break;
         }
         std::thread::sleep(poll_interval);
@@ -57,15 +57,11 @@ fn wait_for_physical_display_modes() {
 }
 
 fn main() {
+    ensure_screen_capture_permission();
     wait_for_physical_display_modes();
 
     // Load settings once, before anything else needs them.
     let settings = settings::load_settings();
-
-    // Create virtual displays BEFORE the Bevy app starts.
-    // This blocks while waiting for display modes, but the event loop
-    // hasn't started yet so macOS won't report the app as unresponsive.
-    let virtual_displays = create_virtual_displays_blocking(settings.num_screens as usize);
 
     App::new()
         .insert_resource(AmbientLight {
@@ -74,7 +70,6 @@ fn main() {
         })
         .insert_resource(ScaleFactor { value: 1.0 })
         .insert_resource(settings)
-        .insert_resource(virtual_displays)
         .add_plugins(DefaultPlugins.set(WindowPlugin {
             primary_window: Some(Window {
                 // https://docs.rs/bevy_window/latest/bevy_window/enum.PresentMode.html
