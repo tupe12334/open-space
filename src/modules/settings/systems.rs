@@ -41,10 +41,22 @@ pub(super) fn poll_menu_changes(
 }
 
 pub(super) fn select_glasses_fullscreen(
+    mut done: Local<bool>,
     settings: Res<AppSettings>,
     monitors: Query<(Entity, &Monitor, Option<&PrimaryMonitor>)>,
     mut windows: Query<&mut Window, With<PrimaryWindow>>,
 ) {
+    if *done {
+        return;
+    }
+
+    // Wait until winit has populated monitor entities.
+    if monitors.is_empty() {
+        return;
+    }
+
+    *done = true;
+
     let Ok(mut window) = windows.single_mut() else {
         return;
     };
