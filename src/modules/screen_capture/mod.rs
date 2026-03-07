@@ -4,6 +4,7 @@ mod plugin;
 pub(crate) use permission::ensure_screen_capture_permission;
 pub(crate) use plugin::ScreenCapturePlugin;
 
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
 use bevy::prelude::*;
@@ -45,6 +46,7 @@ pub(super) struct FrameChannel {
 
 pub(crate) struct DelegateIvars {
     frame_sender: Arc<Sender<Vec<u8>>>,
+    stream_stopped: Arc<AtomicBool>,
 }
 
 declare_class!(
@@ -71,16 +73,13 @@ declare_class!(
             let sample_buffer = CMSampleBuffer::wrap_under_get_rule(sample_buffer);
             if let Some(image_buffer) = sample_buffer.get_image_buffer() {
                 if let Some(pixel_buffer) = image_buffer.downcast::<CVPixelBuffer>() {
-                    // Lock the base address of the pixel buffer
                     pixel_buffer.lock_base_address(kCVPixelBufferLock_ReadOnly);
-
-                    // println!("frame_sender: {:?}", self.ivars().frame_sender);
 
                     if pixel_buffer.get_pixel_format() != kCVPixelFormatType_32BGRA {
                         warn!("Unexpected pixel format");
+                        pixel_buffer.unlock_base_address(kCVPixelBufferLock_ReadOnly);
                         return;
                     }
-                    // let _ = self.ivars().frame_sender.send(rgba_data);
 
                     let width = pixel_buffer.get_width();
                     let height = pixel_buffer.get_height();
@@ -111,37 +110,6 @@ declare_class!(
                     if let Err(e) = self.ivars().frame_sender.try_send(rgba) {
                         debug!("Dropped frame (channel full): {}", e);
                     }
-
-                    // println!("base address: {:?}", base_address);
-                    // println!("pixel buffer: {:?}", pixel_buffer);
-                    // println!("pixel format: {}", pixel_buffer.get_pixel_format());
-                    // println!("width: {}, height: {}, bytes_per_row: {}", width, height, bytes_per_row);
-                    // println!("pixels: {:?}", pixels);
-
-                    // // Get plane 0 (Y plane)
-                    // let y_plane_base = pixel_buffer.get_base_address_of_plane(0);
-                    // let y_plane_bytes_per_row = pixel_buffer.get_bytes_per_row_of_plane(0);
-                    // let y_plane_height = pixel_buffer.get_height_of_plane(0);
-                    // let y_plane = slice::from_raw_parts(
-                    //     y_plane_base as *const u8,
-                    //     y_plane_height * y_plane_bytes_per_row
-                    // );
-
-                    // // Get plane 1 (UV plane)
-                    // let uv_plane_base = pixel_buffer.get_base_address_of_plane(1);
-                    // let uv_plane_bytes_per_row = pixel_buffer.get_bytes_per_row_of_plane(1);
-                    // let uv_plane_height = pixel_buffer.get_height_of_plane(1);
-                    // let uv_plane = slice::from_raw_parts(
-                    //     uv_plane_base as *const u8,
-                    //     uv_plane_height * uv_plane_bytes_per_row
-                    // );
-
-                    // // Now save or process the image using both planes
-                    // save_yuv_as_png(y_plane, uv_plane, width, height,
-                    //             y_plane_bytes_per_row, uv_plane_bytes_per_row);
-
-                    // Unlock the base address when done
-                    // pixel_buffer.unlock_base_address(kCVPixelBufferLock_ReadOnly);
                 }
             }
         }
@@ -151,26 +119,159 @@ declare_class!(
         #[method(stream:didStopWithError:)]
         unsafe fn stream_did_stop_with_error(&self, _stream: &SCStream, error: &NSError) {
             error!("Stream stopped with error: {:?}", error);
+            self.ivars().stream_stopped.store(true, Ordering::SeqCst);
         }
     }
-
-    // unsafe impl Delegate {
-    //     #[method_id(init)]
-    //     fn init(this: Allocated<Self>) -> Option<Id<Self>> {
-    //         let this = this.set_ivars(DelegateIvars {});
-    //         unsafe { msg_send_id![super(this), init] }
-    //     }
-    // }
 );
 
 impl Delegate {
-    pub(crate) fn new(frame_sender: Arc<Sender<Vec<u8>>>) -> Id<Self> {
+    pub(crate) fn new(
+        frame_sender: Arc<Sender<Vec<u8>>>,
+        stream_stopped: Arc<AtomicBool>,
+    ) -> Id<Self> {
         let this: Allocated<Self> = Self::alloc();
         unsafe {
-            let this = this.set_ivars(DelegateIvars { frame_sender });
+            let this = this.set_ivars(DelegateIvars {
+                frame_sender,
+                stream_stopped,
+            });
             msg_send_id![super(this), init]
         }
     }
+}
+
+/// Query `SCShareableContent`, create streams for each display, and start capture.
+/// Returns `(delegates, streams, error_flags)` on success, or `None` if setup fails.
+fn create_streams(
+    display_specs: &[(u32, usize, usize)],
+    senders: &[Arc<Sender<Vec<u8>>>],
+) -> Option<(Vec<Id<Delegate>>, Vec<Id<SCStream>>, Vec<Arc<AtomicBool>>)> {
+    let (sc_tx, mut sc_rx) = mpsc::channel(1);
+    SCShareableContent::get_shareable_content_with_completion_closure(
+        move |shareable_content, error| {
+            let ret = shareable_content.ok_or_else(|| error.unwrap());
+            sc_tx.blocking_send(ret).unwrap();
+        },
+    );
+    let shareable_content = match sc_rx.blocking_recv()? {
+        Ok(sc) => sc,
+        Err(error) => {
+            error!("Failed to get shareable content: {:?}", error);
+            return None;
+        }
+    };
+
+    let sc_displays = shareable_content.displays();
+    if sc_displays.is_empty() {
+        warn!("No display found for screen capture");
+        return None;
+    }
+
+    info!("SCShareableContent has {} display(s):", sc_displays.len());
+    for (i, d) in sc_displays.iter().enumerate() {
+        info!(
+            "  SC display [{}]: id={}, size={}x{}",
+            i,
+            d.display_id(),
+            d.width(),
+            d.height()
+        );
+    }
+    let target_ids: Vec<u32> = display_specs.iter().map(|(id, _, _)| *id).collect();
+    info!("Target display IDs: {:?}", target_ids);
+
+    let mut delegates: Vec<Id<Delegate>> = Vec::new();
+    let mut streams: Vec<Id<SCStream>> = Vec::new();
+    let mut error_flags: Vec<Arc<AtomicBool>> = Vec::new();
+
+    for (sender_idx, &(target_id, cap_w, cap_h)) in display_specs.iter().enumerate() {
+        let sc_display = sc_displays.iter().find(|d| d.display_id() == target_id);
+        let sc_display = if let Some(d) = sc_display {
+            info!(
+                "  Matched sender[{}] -> SC display id={}, sc_size={}x{}, capture={}x{}",
+                sender_idx,
+                d.display_id(),
+                d.width(),
+                d.height(),
+                cap_w,
+                cap_h,
+            );
+            d
+        } else {
+            warn!("SCDisplay not found for display ID {}", target_id);
+            continue;
+        };
+        let sender = Arc::clone(&senders[sender_idx]);
+        let stopped_flag = Arc::new(AtomicBool::new(false));
+
+        let filter = SCContentFilter::init_with_display_exclude_windows(
+            SCContentFilter::alloc(),
+            sc_display,
+            &NSArray::new(),
+        );
+
+        let capture_width: size_t = cap_w;
+        let capture_height: size_t = cap_h;
+        let configuration: Id<SCStreamConfiguration> = SCStreamConfiguration::new();
+        configuration.set_width(capture_width);
+        configuration.set_height(capture_height);
+        configuration.set_minimum_frame_interval(core_media::time::CMTime::make(1, 60));
+        configuration.set_pixel_format(kCVPixelFormatType_32BGRA);
+
+        let delegate = Delegate::new(sender, Arc::clone(&stopped_flag));
+        let stream_error = ProtocolObject::from_ref(&*delegate);
+        let stream =
+            SCStream::init_with_filter(SCStream::alloc(), &filter, &configuration, stream_error);
+        let queue = DispatchQueue::new(
+            &format!("com.spatial_display.queue.{sender_idx}"),
+            DispatchQueueAttr::SERIAL,
+        );
+        let output: &ProtocolObject<dyn SCStreamOutput> = ProtocolObject::from_ref(&*delegate);
+        let added: bool = {
+            let mut error: *mut NSError = std::ptr::null_mut();
+            let raw_queue = queue.as_raw().as_ptr().cast::<AnyObject>();
+            let result: bool = unsafe {
+                objc2::msg_send![
+                    &*stream,
+                    addStreamOutput: output,
+                    type: SCStreamOutputType::Screen.0,
+                    sampleHandlerQueue: raw_queue,
+                    error: &mut error
+                ]
+            };
+            if !result {
+                let err = unsafe { Id::retain(error) };
+                error!(
+                    "Error adding output for display {} (ID {}): {:?}",
+                    sender_idx, target_id, err
+                );
+            }
+            result
+        };
+        if !added {
+            continue;
+        }
+
+        delegates.push(delegate);
+        streams.push(stream);
+        error_flags.push(stopped_flag);
+    }
+
+    if streams.is_empty() {
+        return None;
+    }
+
+    info!("Starting capture for {} display(s)", streams.len());
+    for (idx, stream) in streams.iter().enumerate() {
+        stream.start_capture(move |result| {
+            info!("start_capture callback for display {}", idx);
+            if let Some(error) = result {
+                warn!("error starting display {}: {:?}", idx, error);
+            }
+        });
+    }
+
+    Some((delegates, streams, error_flags))
 }
 
 pub(super) fn setup_screen_capture(
@@ -211,142 +312,30 @@ pub(super) fn setup_screen_capture(
     // Reorder so the main Mac display is at the center of the grid
     center_main_display(&mut display_specs, main_id, |&(id, _, _)| id);
 
-    #[expect(
-        clippy::infinite_loop,
-        reason = "capture thread intentionally runs forever"
-    )]
-    std::thread::spawn(move || {
-        let (sc_tx, mut sc_rx) = mpsc::channel(1);
-        SCShareableContent::get_shareable_content_with_completion_closure(
-            move |shareable_content, error| {
-                let ret = shareable_content.ok_or_else(|| error.unwrap());
-                sc_tx.blocking_send(ret).unwrap();
-            },
-        );
-        let shareable_content = sc_rx.blocking_recv().unwrap();
-        if let Err(error) = shareable_content {
-            error!("Failed to get shareable content: {:?}", error);
-            return;
-        }
-        let shareable_content = shareable_content.unwrap();
-
-        let sc_displays = shareable_content.displays();
-        if sc_displays.is_empty() {
-            warn!("No display found for screen capture");
-            return;
-        }
-
-        // Log all available SCDisplays
-        info!("SCShareableContent has {} display(s):", sc_displays.len());
-        for (i, d) in sc_displays.iter().enumerate() {
-            info!(
-                "  SC display [{}]: id={}, size={}x{}",
-                i,
-                d.display_id(),
-                d.width(),
-                d.height()
-            );
-        }
-        let target_ids: Vec<u32> = display_specs.iter().map(|(id, _, _)| *id).collect();
-        info!("Target display IDs: {:?}", target_ids);
-
-        // We need to keep delegates and streams alive for the duration of capture
-        let mut delegates: Vec<Id<Delegate>> = Vec::new();
-        let mut streams: Vec<Id<SCStream>> = Vec::new();
-
-        // Match each target display ID to its SCDisplay and sender
-        for (sender_idx, &(target_id, cap_w, cap_h)) in display_specs.iter().enumerate() {
-            let sc_display = sc_displays.iter().find(|d| d.display_id() == target_id);
-            let sc_display = if let Some(d) = sc_display {
-                info!(
-                    "  Matched sender[{}] -> SC display id={}, sc_size={}x{}, capture={}x{}",
-                    sender_idx,
-                    d.display_id(),
-                    d.width(),
-                    d.height(),
-                    cap_w,
-                    cap_h,
-                );
-                d
-            } else {
-                warn!("SCDisplay not found for display ID {}", target_id);
-                continue;
-            };
-            let sender = Arc::clone(&senders[sender_idx]);
-
-            let filter = SCContentFilter::init_with_display_exclude_windows(
-                SCContentFilter::alloc(),
-                sc_display,
-                &NSArray::new(),
-            );
-
-            let capture_width: size_t = cap_w;
-            let capture_height: size_t = cap_h;
-            let configuration: Id<SCStreamConfiguration> = SCStreamConfiguration::new();
-            configuration.set_width(capture_width);
-            configuration.set_height(capture_height);
-            configuration.set_minimum_frame_interval(core_media::time::CMTime::make(1, 60));
-            configuration.set_pixel_format(kCVPixelFormatType_32BGRA);
-
-            let delegate = Delegate::new(sender);
-            let stream_error = ProtocolObject::from_ref(&*delegate);
-            let stream = SCStream::init_with_filter(
-                SCStream::alloc(),
-                &filter,
-                &configuration,
-                stream_error,
-            );
-            let queue = DispatchQueue::new(
-                &format!("com.spatial_display.queue.{sender_idx}"),
-                DispatchQueueAttr::SERIAL,
-            );
-            let output: &ProtocolObject<dyn SCStreamOutput> = ProtocolObject::from_ref(&*delegate);
-            let add_result: Result<bool, Id<NSError>> = {
-                let mut error: *mut NSError = std::ptr::null_mut();
-                let raw_queue = queue.as_raw().as_ptr().cast::<AnyObject>();
-                let result: bool = unsafe {
-                    objc2::msg_send![
-                        &*stream,
-                        addStreamOutput: output,
-                        type: SCStreamOutputType::Screen.0,
-                        sampleHandlerQueue: raw_queue,
-                        error: &mut error
-                    ]
-                };
-                if result {
-                    Ok(result)
-                } else {
-                    Err(unsafe { Id::retain(error).unwrap() })
-                }
-            };
-            if let Err(ret) = add_result {
-                error!(
-                    "Error adding output for display {} (ID {}): {:?}",
-                    sender_idx, target_id, ret
-                );
-                continue;
-            }
-
-            delegates.push(delegate);
-            streams.push(stream);
-        }
-
+    std::thread::spawn(move || -> ! {
         info!("Waiting 5 seconds before starting capture...");
         std::thread::sleep(std::time::Duration::from_secs(5));
 
-        info!("STARTING CAP for {} display(s)", streams.len());
-        for (idx, stream) in streams.iter().enumerate() {
-            stream.start_capture(move |result| {
-                info!("start_capture for display {}", idx);
-                if let Some(error) = result {
-                    warn!("error starting display {}: {:?}", idx, error);
-                }
-            });
-        }
-
-        info!("🔄 Entering capture loop");
         loop {
-            std::thread::sleep(std::time::Duration::from_secs(1));
+            info!("(Re)initializing screen capture streams...");
+            let Some((_delegates, _streams, error_flags)) =
+                create_streams(&display_specs, &senders)
+            else {
+                warn!("Failed to create streams, retrying in 5 seconds...");
+                std::thread::sleep(std::time::Duration::from_secs(5));
+                continue;
+            };
+
+            // Monitor for stream errors and restart when detected
+            loop {
+                std::thread::sleep(std::time::Duration::from_secs(1));
+                if error_flags.iter().any(|f| f.load(Ordering::SeqCst)) {
+                    warn!("Stream error detected, restarting capture in 2 seconds...");
+                    std::thread::sleep(std::time::Duration::from_secs(2));
+                    break;
+                }
+            }
+            // _delegates and _streams are dropped here, cleaning up the old capture
         }
     });
 }

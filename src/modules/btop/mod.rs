@@ -91,6 +91,7 @@ declare_class!(
 
                     if pixel_buffer.get_pixel_format() != kCVPixelFormatType_32BGRA {
                         warn!("Unexpected pixel format for btop capture");
+                        pixel_buffer.unlock_base_address(kCVPixelBufferLock_ReadOnly);
                         return;
                     }
 
