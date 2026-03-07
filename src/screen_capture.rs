@@ -6,7 +6,7 @@ use core_media::sample_buffer::{CMSampleBuffer, CMSampleBufferRef};
 use core_video::pixel_buffer::{
     kCVPixelBufferLock_ReadOnly, kCVPixelFormatType_32BGRA, CVPixelBuffer,
 };
-use dispatch2::{Queue, QueueAttribute};
+use dispatch2::{DispatchObject, DispatchQueue, DispatchQueueAttr};
 use libc::size_t;
 use objc2::mutability;
 use objc2::{
@@ -29,6 +29,30 @@ use crate::stage::{get_active_displays, AssetHandles};
 use crate::virtual_display::VirtualDisplays;
 use crate::ScaleFactor;
 
+extern "C" {
+    fn CGPreflightScreenCaptureAccess() -> bool;
+    fn CGRequestScreenCaptureAccess() -> bool;
+}
+
+/// Check and request screen recording permission before the event loop starts.
+/// Must be called from `main()` before `App::new()` to avoid blocking the event loop.
+pub fn ensure_screen_capture_permission() {
+    let has_permission = unsafe { CGPreflightScreenCaptureAccess() };
+    if has_permission {
+        eprintln!("Screen recording permission granted");
+    } else {
+        eprintln!("Screen recording permission not granted. Requesting access...");
+        let granted = unsafe { CGRequestScreenCaptureAccess() };
+        if !granted {
+            eprintln!(
+                "Screen recording permission denied. \
+                 Grant permission in System Settings > Privacy & Security > Screen Recording, \
+                 then restart the app."
+            );
+        }
+    }
+}
+
 #[derive(Resource)]
 struct FrameChannel {
     senders: Vec<Arc<Sender<Vec<u8>>>>,
@@ -42,8 +66,7 @@ impl Plugin for ScreenCapturePlugin {
         let num_screens = app
             .world()
             .get_resource::<crate::settings::AppSettings>()
-            .map(|s| s.num_screens as usize)
-            .unwrap_or(6);
+            .map_or(6, |s| s.num_screens as usize);
         let mut senders = Vec::new();
         let mut receivers = Vec::new();
         for _ in 0..num_screens {
@@ -91,7 +114,7 @@ declare_class!(
                     // println!("frame_sender: {:?}", self.ivars().frame_sender);
 
                     if pixel_buffer.get_pixel_format() != kCVPixelFormatType_32BGRA {
-                        println!("Unexpected pixel format");
+                        warn!("Unexpected pixel format");
                         return;
                     }
                     // let _ = self.ivars().frame_sender.send(rgba_data);
@@ -164,7 +187,7 @@ declare_class!(
     unsafe impl SCStreamDelegate for Delegate {
         #[method(stream:didStopWithError:)]
         unsafe fn stream_did_stop_with_error(&self, _stream: &SCStream, error: &NSError) {
-            println!("error: {:?}", error);
+            error!("Stream stopped with error: {:?}", error);
         }
     }
 
@@ -196,15 +219,7 @@ fn setup_screen_capture(
 
     // Collect (display_id, capture_width, capture_height)
     let vd = virtual_displays.displays();
-    let display_specs: Vec<(u32, usize, usize)> = if !vd.is_empty() {
-        vd.iter()
-            .map(|d| {
-                let w = (d.width as f64 * scale_factor.value) as usize;
-                let h = (d.height as f64 * scale_factor.value) as usize;
-                (d.display_id, w, h)
-            })
-            .collect()
-    } else {
+    let display_specs: Vec<(u32, usize, usize)> = if vd.is_empty() {
         get_active_displays(2)
             .iter()
             .map(|(id, d)| {
@@ -213,8 +228,20 @@ fn setup_screen_capture(
                 (*id, w, h)
             })
             .collect()
+    } else {
+        vd.iter()
+            .map(|d| {
+                let w = (d.width as f64 * scale_factor.value) as usize;
+                let h = (d.height as f64 * scale_factor.value) as usize;
+                (d.display_id, w, h)
+            })
+            .collect()
     };
 
+    #[allow(
+        clippy::infinite_loop,
+        reason = "capture thread intentionally runs forever"
+    )]
     std::thread::spawn(move || {
         let (sc_tx, mut sc_rx) = mpsc::channel(1);
         SCShareableContent::get_shareable_content_with_completion_closure(
@@ -225,14 +252,14 @@ fn setup_screen_capture(
         );
         let shareable_content = sc_rx.blocking_recv().unwrap();
         if let Err(error) = shareable_content {
-            println!("error: {:?}", error);
+            error!("Failed to get shareable content: {:?}", error);
             return;
         }
         let shareable_content = shareable_content.unwrap();
 
         let sc_displays = shareable_content.displays();
         if sc_displays.is_empty() {
-            println!("no display found");
+            warn!("No display found for screen capture");
             return;
         }
 
@@ -251,31 +278,28 @@ fn setup_screen_capture(
         info!("Target display IDs: {:?}", target_ids);
 
         // We need to keep delegates and streams alive for the duration of capture
-        let mut _delegates: Vec<Id<Delegate>> = Vec::new();
-        let mut _streams: Vec<Id<SCStream>> = Vec::new();
+        let mut delegates: Vec<Id<Delegate>> = Vec::new();
+        let mut streams: Vec<Id<SCStream>> = Vec::new();
 
         // Match each target display ID to its SCDisplay and sender
         for (sender_idx, &(target_id, cap_w, cap_h)) in display_specs.iter().enumerate() {
             let sc_display = sc_displays.iter().find(|d| d.display_id() == target_id);
-            let sc_display = match sc_display {
-                Some(d) => {
-                    info!(
-                        "  Matched sender[{}] -> SC display id={}, sc_size={}x{}, capture={}x{}",
-                        sender_idx,
-                        d.display_id(),
-                        d.width(),
-                        d.height(),
-                        cap_w,
-                        cap_h,
-                    );
-                    d
-                }
-                None => {
-                    warn!("SCDisplay not found for display ID {}", target_id);
-                    continue;
-                }
+            let sc_display = if let Some(d) = sc_display {
+                info!(
+                    "  Matched sender[{}] -> SC display id={}, sc_size={}x{}, capture={}x{}",
+                    sender_idx,
+                    d.display_id(),
+                    d.width(),
+                    d.height(),
+                    cap_w,
+                    cap_h,
+                );
+                d
+            } else {
+                warn!("SCDisplay not found for display ID {}", target_id);
+                continue;
             };
-            let sender = senders[sender_idx].clone();
+            let sender = Arc::clone(&senders[sender_idx]);
 
             let filter = SCContentFilter::init_with_display_exclude_windows(
                 SCContentFilter::alloc(),
@@ -283,8 +307,8 @@ fn setup_screen_capture(
                 &NSArray::new(),
             );
 
-            let capture_width = cap_w as size_t;
-            let capture_height = cap_h as size_t;
+            let capture_width: size_t = cap_w;
+            let capture_height: size_t = cap_h;
             let configuration: Id<SCStreamConfiguration> = SCStreamConfiguration::new();
             configuration.set_width(capture_width);
             configuration.set_height(capture_height);
@@ -299,29 +323,49 @@ fn setup_screen_capture(
                 &configuration,
                 stream_error,
             );
-            let queue = Queue::new(
-                &format!("com.spatial_display.queue.{}", sender_idx),
-                QueueAttribute::Serial,
+            let queue = DispatchQueue::new(
+                &format!("com.spatial_display.queue.{sender_idx}"),
+                DispatchQueueAttr::SERIAL,
             );
-            let output = ProtocolObject::from_ref(&*delegate);
-            if let Err(ret) = stream.add_stream_output(output, SCStreamOutputType::Screen, &queue) {
-                println!(
-                    "error adding output for display {} (ID {}): {:?}",
+            let output: &ProtocolObject<dyn SCStreamOutput> = ProtocolObject::from_ref(&*delegate);
+            // Use msg_send! directly because screen-capture-kit depends on dispatch2 0.1
+            // which has a different Queue type than dispatch2 0.3.1's DispatchQueue.
+            // Both wrap the same underlying dispatch_queue_t, so passing the raw pointer is safe.
+            let add_result: Result<bool, Id<NSError>> = {
+                let mut error: *mut NSError = std::ptr::null_mut();
+                let raw_queue = queue.as_raw().as_ptr().cast::<std::ffi::c_void>();
+                let result: bool = unsafe {
+                    objc2::msg_send![
+                        &*stream,
+                        addStreamOutput: output,
+                        type: SCStreamOutputType::Screen.0,
+                        sampleHandlerQueue: raw_queue,
+                        error: &mut error
+                    ]
+                };
+                if result {
+                    Ok(result)
+                } else {
+                    Err(unsafe { Id::retain(error).unwrap() })
+                }
+            };
+            if let Err(ret) = add_result {
+                error!(
+                    "Error adding output for display {} (ID {}): {:?}",
                     sender_idx, target_id, ret
                 );
                 continue;
             }
 
-            _delegates.push(delegate);
-            _streams.push(stream);
+            delegates.push(delegate);
+            streams.push(stream);
         }
 
         info!("Waiting 5 seconds before starting capture...");
         std::thread::sleep(std::time::Duration::from_secs(5));
 
-        info!("STARTING CAP for {} display(s)", _streams.len());
-        for (i, stream) in _streams.iter().enumerate() {
-            let idx = i;
+        info!("STARTING CAP for {} display(s)", streams.len());
+        for (idx, stream) in streams.iter().enumerate() {
             stream.start_capture(move |result| {
                 info!("start_capture for display {}", idx);
                 if let Some(error) = result {
@@ -361,5 +405,5 @@ fn update_screen_texture(
     }
 
     // Touch materials to force texture update
-    for (_, mut _material) in materials.iter_mut() {}
+    for (_, _material) in materials.iter_mut() {}
 }

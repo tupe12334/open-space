@@ -1,0 +1,40 @@
+{
+  "version": "0.2",
+  "language": "en",
+  "words": [
+    "ahrs",
+    "autoreleased",
+    "bevy",
+    "bunx",
+    "BGRA",
+    "clippy",
+    "dcmimu",
+    "framepace",
+    "framespace",
+    "hidapi",
+    "ivars",
+    "libc",
+    "Madgwick",
+    "nalgebra",
+    "nsarray",
+    "objc",
+    "serde",
+    "Srgb",
+    "Unorm",
+    "VITURE",
+    "Vsync",
+    "winit",
+    "XREAL",
+    "xyzw",
+    "cheatbook"
+  ],
+  "ignorePaths": [
+    "target/**",
+    "Cargo.lock",
+    ".centy/**",
+    ".git/**",
+    "*.dylib",
+    "*.so",
+    "*.dll"
+  ]
+}

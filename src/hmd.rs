@@ -20,7 +20,7 @@ impl Plugin for HmdPlugin {
     fn build(&self, app: &mut App) {
         let orientation = Arc::new(Mutex::new(Quat::IDENTITY));
         app.insert_resource(GlassesOrientation {
-            quat: orientation.clone(),
+            quat: Arc::clone(&orientation),
         });
         std::thread::spawn(move || {
             tracking_thread(orientation);
@@ -162,7 +162,7 @@ fn apply_glasses_orientation(
         Err(_) => return,
     };
 
-    for mut transform in query.iter_mut() {
+    for mut transform in &mut query {
         transform.rotation = quat;
     }
 }

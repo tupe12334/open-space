@@ -16,7 +16,7 @@ fn spawn_camera(mut commands: Commands) {
         Camera3d::default(),
         Camera::default(),
         Projection::Perspective(PerspectiveProjection {
-            fov: 21.70f32.to_radians(),
+            fov: 21.70_f32.to_radians(),
             ..default()
         }),
         Transform::from_xyz(0.0, 0.0, 0.0),
