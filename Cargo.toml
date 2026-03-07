@@ -49,6 +49,7 @@ resolver = "2"
 trivial_numeric_casts = "deny"
 unused_import_braces = "deny"
 unused_qualifications = "deny"
+macro_use_extern_crate = "deny"
 
 [workspace.lints.clippy]
 # Pedantic: catches subtle bugs and enforces idiomatic Rust
