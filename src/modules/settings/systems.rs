@@ -57,15 +57,30 @@ pub(super) fn select_glasses_fullscreen(
 
     *done = true;
 
+    for (entity, monitor, primary) in &monitors {
+        info!(
+            "Monitor {:?}: name={:?}, size={}x{}, refresh={}mHz, primary={}",
+            entity,
+            monitor.name,
+            monitor.physical_width,
+            monitor.physical_height,
+            monitor.refresh_rate_millihertz.unwrap_or(0),
+            primary.is_some()
+        );
+    }
+
     let Ok(mut window) = windows.single_mut() else {
         return;
     };
 
     let glasses_entity = settings.glasses_monitor_name.as_ref().map_or_else(
         || {
+            // Pick the non-primary monitor with the highest refresh rate.
+            // XREAL Air glasses run at 120Hz vs virtual screens at 60Hz.
             monitors
                 .iter()
-                .find(|(_, _, primary)| primary.is_none())
+                .filter(|(_, _, primary)| primary.is_none())
+                .max_by_key(|(_, m, _)| m.refresh_rate_millihertz.unwrap_or(0))
                 .map(|(entity, _, _)| entity)
         },
         |name_filter| {
