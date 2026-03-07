@@ -30,7 +30,8 @@
       "Bash(grep:*)",
       "Bash(cargo build:*)",
       "Bash(git config:*)",
-      "Bash(gh issue:*)"
+      "Bash(gh issue:*)",
+      "Bash(command:*)"
     ],
     "deny": ["Bash(gh issue create:*)"]
   },
