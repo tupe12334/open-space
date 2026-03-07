@@ -46,7 +46,7 @@ resolver = "2"
 
 [workspace.lints.clippy]
 # Pedantic: catches subtle bugs and enforces idiomatic Rust
-pedantic = { level = "warn", priority = -1 }
+pedantic = { level = "deny", priority = -1 }
 # Nursery: early detection of newer lint patterns
 nursery = { level = "warn", priority = -1 }
 # Cargo: Cargo manifest best practices
