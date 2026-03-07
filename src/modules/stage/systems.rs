@@ -71,9 +71,17 @@ pub(super) fn spawn_screen(
             .collect()
     };
 
+    // Always include the main Mac display
+    let main_display = CGDisplay::main();
+    let main_id = main_display.id;
+    if !screen_specs.iter().any(|(id, _, _)| *id == main_id) {
+        let main_w = (main_display.pixels_wide() as f64 * scale_factor.value).round() as u32;
+        let main_h = (main_display.pixels_high() as f64 * scale_factor.value).round() as u32;
+        screen_specs.push((main_id, main_w, main_h));
+    }
+
     // Reorder so the main Mac display is at the center of the grid
-    if vd.is_empty() && screen_specs.len() > 1 {
-        let main_id = CGDisplay::main().id;
+    if screen_specs.len() > 1 {
         if let Some(main_idx) = screen_specs.iter().position(|(id, _, _)| *id == main_id) {
             let cols = 3_usize;
             let n = screen_specs.len();
