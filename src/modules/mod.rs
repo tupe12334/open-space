@@ -1,3 +1,4 @@
+pub(crate) mod btop;
 pub(crate) mod camera;
 pub(crate) mod debug;
 pub(crate) mod display_modes;
@@ -6,3 +7,4 @@ pub(crate) mod screen_capture;
 pub(crate) mod settings;
 pub(crate) mod stage;
 pub(crate) mod virtual_display;
+pub(crate) mod webcam_distance;

@@ -11,6 +11,7 @@ use bevy::{
     window::{PresentMode, WindowMode},
 };
 
+use modules::btop::BtopPlugin;
 use modules::camera::CameraPlugin;
 use modules::debug::DebugPlugin;
 use modules::hmd::HmdPlugin;
@@ -18,6 +19,7 @@ use modules::screen_capture::{ensure_screen_capture_permission, ScreenCapturePlu
 use modules::settings::SettingsPlugin;
 use modules::stage::StagePlugin;
 use modules::virtual_display::VirtualDisplayPlugin;
+use modules::webcam_distance::{ensure_camera_permission, WebcamDistancePlugin};
 
 #[derive(Resource)]
 pub struct ScaleFactor {
@@ -26,6 +28,7 @@ pub struct ScaleFactor {
 
 fn main() {
     ensure_screen_capture_permission();
+    ensure_camera_permission();
     modules::display_modes::wait_for_physical_display_modes();
 
     // Load settings once, before anything else needs them.
@@ -55,6 +58,8 @@ fn main() {
         .add_plugins(StagePlugin)
         .add_plugins(HmdPlugin)
         .add_plugins(ScreenCapturePlugin)
+        .add_plugins(BtopPlugin)
+        .add_plugins(WebcamDistancePlugin)
         .insert_resource(Time::<Fixed>::from_hz(500.0)) // when using Fixed schedule
         .add_plugins(DebugPlugin)
         .run();
