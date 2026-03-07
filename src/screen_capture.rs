@@ -238,7 +238,7 @@ fn setup_screen_capture(
             .collect()
     };
 
-    #[allow(clippy::infinite_loop)]
+    #[allow(clippy::infinite_loop, reason = "capture thread intentionally runs forever")]
     std::thread::spawn(move || {
         let (sc_tx, mut sc_rx) = mpsc::channel(1);
         SCShareableContent::get_shareable_content_with_completion_closure(
@@ -304,8 +304,8 @@ fn setup_screen_capture(
                 &NSArray::new(),
             );
 
-            let capture_width = cap_w as size_t;
-            let capture_height = cap_h as size_t;
+            let capture_width: size_t = cap_w;
+            let capture_height: size_t = cap_h;
             let configuration: Id<SCStreamConfiguration> = SCStreamConfiguration::new();
             configuration.set_width(capture_width);
             configuration.set_height(capture_height);

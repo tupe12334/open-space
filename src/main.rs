@@ -1,5 +1,5 @@
 // Bevy and ObjC interop require significant unsafe code throughout this crate.
-#![allow(clippy::undocumented_unsafe_blocks)]
+#![allow(clippy::undocumented_unsafe_blocks, reason = "ObjC interop requires pervasive unsafe throughout this crate")]
 
 mod camera;
 mod debug;
