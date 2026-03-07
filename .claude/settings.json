@@ -31,7 +31,9 @@
       "Bash(cargo build:*)",
       "Bash(git config:*)",
       "Bash(gh issue:*)",
-      "Bash(command:*)"
+      "Bash(command:*)",
+      "Bash(cargo clippy:*)",
+      "Bash(cargo test:*)"
     ],
     "deny": ["Bash(gh issue create:*)"]
   },

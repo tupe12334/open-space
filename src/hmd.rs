@@ -1,9 +1,8 @@
 use std::sync::atomic::Ordering;
 use std::sync::{Arc, Mutex};
 
-use ahrs::{Ahrs as _, Madgwick};
 use bevy::prelude::*;
-use nalgebra::Vector3;
+use dcmimu::DCMIMU;
 
 use crate::camera::MainCamera;
 use crate::settings::CENTER_STAGE;
@@ -25,17 +24,15 @@ impl Plugin for HmdPlugin {
         std::thread::spawn(move || {
             tracking_thread(orientation);
         });
-        app.add_systems(FixedUpdate, apply_glasses_orientation);
+        app.add_systems(FixedPreUpdate, apply_glasses_orientation);
     }
 }
 
-/// Duration (in seconds) to let the Madgwick filter stabilize before capturing the reference.
-/// The filter needs several seconds to converge toward gravity alignment.
+/// Duration (in seconds) to let the DCMIMU filter stabilize before capturing the reference.
 const WARMUP_DURATION_SECS: f64 = 3.0;
 
 fn tracking_thread(orientation: Arc<Mutex<Quat>>) {
-    let glasses = ar_drivers::any_glasses();
-    let mut glasses = match glasses {
+    let mut glasses = match ar_drivers::any_glasses() {
         Ok(g) => {
             info!("AR glasses connected");
             g
@@ -49,15 +46,11 @@ fn tracking_thread(orientation: Arc<Mutex<Quat>>) {
         }
     };
 
-    let mut last_sample_time: Option<std::time::Instant> = None;
-    let mut dt_sum: f64 = 0.0;
-    let mut dt_count: u64 = 0;
-    let mut filter_calibrated = false;
-
-    let mut ahrs = Madgwick::new(1.0 / 1000.0, 0.1);
+    let mut dcmimu = DCMIMU::new();
+    let mut last_timestamp: Option<u64> = None;
     let tracking_start = std::time::Instant::now();
     let mut sample_count: u32 = 0;
-    let mut reference_quat: Option<nalgebra::UnitQuaternion<f64>> = None;
+    let mut reference_quat: Option<Quat> = None;
     let mut log_counter: u32 = 0;
 
     loop {
@@ -65,44 +58,27 @@ fn tracking_thread(orientation: Arc<Mutex<Quat>>) {
             Ok(ar_drivers::GlassesEvent::AccGyro {
                 accelerometer,
                 gyroscope,
-                ..
+                timestamp,
             }) => {
-                let now = std::time::Instant::now();
+                if let Some(prev_ts) = last_timestamp {
+                    let dt = (timestamp - prev_ts) as f32 / 1_000_000.0;
 
-                // Measure actual IMU sample interval
-                if let Some(prev) = last_sample_time {
-                    let dt = now.duration_since(prev).as_secs_f64();
-                    dt_sum += dt;
-                    dt_count += 1;
+                    dcmimu.update(
+                        (gyroscope.x, gyroscope.y, gyroscope.z),
+                        (accelerometer.x, accelerometer.y, accelerometer.z),
+                        dt,
+                    );
 
-                    // Recalibrate filter with measured rate once
-                    if !filter_calibrated && dt_count >= 100 {
-                        let avg_dt = dt_sum / dt_count as f64;
-                        info!(
-                            "Measured IMU rate: {:.1} Hz (dt={:.4}s), recalibrating filter",
-                            1.0 / avg_dt,
-                            avg_dt
-                        );
-                        ahrs = Madgwick::new(avg_dt, 0.1);
-                        filter_calibrated = true;
-                    }
-                }
-                last_sample_time = Some(now);
+                    let dcm = dcmimu.all();
+                    let current_quat =
+                        Quat::from_euler(EulerRot::YXZ, dcm.yaw, dcm.roll, -dcm.pitch);
 
-                let gyro = Vector3::new(gyroscope.x as f64, gyroscope.y as f64, gyroscope.z as f64);
-                let accel = Vector3::new(
-                    accelerometer.x as f64,
-                    accelerometer.y as f64,
-                    accelerometer.z as f64,
-                );
-
-                if let Ok(q) = ahrs.update_imu(&gyro, &accel) {
                     sample_count = sample_count.saturating_add(1);
 
-                    // Capture reference after time-based warmup (independent of IMU rate)
-                    let elapsed = now.duration_since(tracking_start).as_secs_f64();
+                    // Capture reference after warmup
+                    let elapsed = tracking_start.elapsed().as_secs_f64();
                     if reference_quat.is_none() && elapsed >= WARMUP_DURATION_SECS {
-                        reference_quat = Some(*q);
+                        reference_quat = Some(current_quat);
                         info!(
                             "Head tracking calibrated after {:.1}s ({} samples)",
                             elapsed, sample_count
@@ -111,26 +87,19 @@ fn tracking_thread(orientation: Arc<Mutex<Quat>>) {
 
                     // Re-center: update reference to current orientation
                     if CENTER_STAGE.swap(false, Ordering::Relaxed) {
-                        reference_quat = Some(*q);
+                        reference_quat = Some(current_quat);
                         info!("Center stage: head tracking reference reset");
                     }
 
-                    if let Some(ref_q) = &reference_quat {
-                        // Relative rotation: how much the head has rotated since calibration
-                        let relative = ref_q.inverse() * q;
-                        let bevy_quat = Quat::from_xyzw(
-                            relative.i as f32,
-                            relative.j as f32,
-                            relative.k as f32,
-                            relative.w as f32,
-                        );
+                    if let Some(ref_q) = reference_quat {
+                        let relative = ref_q.inverse() * current_quat;
 
                         // Log orientation periodically to detect drift
                         log_counter += 1;
                         if log_counter.is_multiple_of(1000) {
-                            let (pitch, yaw, roll) = bevy_quat.to_euler(EulerRot::XYZ);
+                            let (pitch, yaw, roll) = relative.to_euler(EulerRot::XYZ);
                             info!(
-                                "[HMD] pitch={:.3}° yaw={:.3}° roll={:.3}° (sample #{})",
+                                "[HMD] pitch={:.3} yaw={:.3} roll={:.3} (sample #{})",
                                 pitch.to_degrees(),
                                 yaw.to_degrees(),
                                 roll.to_degrees(),
@@ -139,10 +108,12 @@ fn tracking_thread(orientation: Arc<Mutex<Quat>>) {
                         }
 
                         if let Ok(mut lock) = orientation.lock() {
-                            *lock = bevy_quat;
+                            *lock = relative;
                         }
                     }
                 }
+
+                last_timestamp = Some(timestamp);
             }
             Ok(_) => {}
             Err(e) => {
