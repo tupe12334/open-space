@@ -71,6 +71,7 @@ unit_bindings = "deny"
 missing_copy_implementations = "deny"
 missing_debug_implementations = "deny"
 deprecated_in_future = "deny"
+ffi_unwind_calls = "deny"
 
 [workspace.lints.clippy]
 # Pedantic: catches subtle bugs and enforces idiomatic Rust
