@@ -26,7 +26,7 @@ unsafe impl Sync for SendableObj {}
 impl Drop for SendableObj {
     fn drop(&mut self) {
         unsafe {
-            ffi::objc_release(self.0 as *mut _);
+            ffi::objc_release(self.0 as *mut ffi::objc_object);
         }
     }
 }
@@ -148,8 +148,8 @@ pub(super) fn create_virtual_displays_system(
                     "Virtual display '{}' creation failed (initWithDescriptor returned nil)",
                     display_name
                 );
-                ffi::objc_release(descriptor as *mut _);
-                ffi::objc_release(settings as *mut _);
+                ffi::objc_release(descriptor as *mut ffi::objc_object);
+                ffi::objc_release(settings as *mut ffi::objc_object);
                 continue;
             }
 
@@ -160,15 +160,15 @@ pub(super) fn create_virtual_displays_system(
                 display_name, display_id, result
             );
 
-            ffi::objc_release(descriptor as *mut _);
-            ffi::objc_release(settings as *mut _);
+            ffi::objc_release(descriptor as *mut ffi::objc_object);
+            ffi::objc_release(settings as *mut ffi::objc_object);
 
             if !result {
                 warn!(
                     "applySettings failed for virtual display '{}' (ID {})",
                     display_name, display_id
                 );
-                ffi::objc_release(display as *mut _);
+                ffi::objc_release(display as *mut ffi::objc_object);
                 continue;
             }
 
