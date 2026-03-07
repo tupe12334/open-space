@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use super::{spawn_screen, spawn_stage};
+use super::systems::{spawn_screen, spawn_stage};
 
 pub(crate) struct StagePlugin;
 
