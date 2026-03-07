@@ -151,6 +151,7 @@ default_union_representation = "deny"
 pointer_format = "deny"
 precedence_bits = "deny"
 as_pointer_underscore = "deny"
+panic_in_result_fn = "deny"
 
 # Intentionally allowed pedantic/nursery lints with justification:
 # This crate heavily uses Bevy and ObjC interop which requires many unsafe casts
