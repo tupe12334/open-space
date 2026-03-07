@@ -6,7 +6,7 @@ use core_media::sample_buffer::{CMSampleBuffer, CMSampleBufferRef};
 use core_video::pixel_buffer::{
     kCVPixelBufferLock_ReadOnly, kCVPixelFormatType_32BGRA, CVPixelBuffer,
 };
-use dispatch2::{Queue, QueueAttribute};
+use dispatch2::{DispatchObject, DispatchQueue, DispatchQueueAttr};
 use libc::size_t;
 use objc2::mutability;
 use objc2::{
@@ -320,12 +320,33 @@ fn setup_screen_capture(
                 &configuration,
                 stream_error,
             );
-            let queue = Queue::new(
+            let queue = DispatchQueue::new(
                 &format!("com.spatial_display.queue.{sender_idx}"),
-                QueueAttribute::Serial,
+                DispatchQueueAttr::SERIAL,
             );
-            let output = ProtocolObject::from_ref(&*delegate);
-            if let Err(ret) = stream.add_stream_output(output, SCStreamOutputType::Screen, &queue) {
+            let output: &ProtocolObject<dyn SCStreamOutput> = ProtocolObject::from_ref(&*delegate);
+            // Use msg_send! directly because screen-capture-kit depends on dispatch2 0.1
+            // which has a different Queue type than dispatch2 0.3.1's DispatchQueue.
+            // Both wrap the same underlying dispatch_queue_t, so passing the raw pointer is safe.
+            let add_result: Result<bool, Id<NSError>> = {
+                let mut error: *mut NSError = std::ptr::null_mut();
+                let raw_queue = queue.as_raw().as_ptr().cast::<std::ffi::c_void>();
+                let result: bool = unsafe {
+                    objc2::msg_send![
+                        &*stream,
+                        addStreamOutput: output,
+                        type: SCStreamOutputType::Screen.0,
+                        sampleHandlerQueue: raw_queue,
+                        error: &mut error
+                    ]
+                };
+                if result {
+                    Ok(result)
+                } else {
+                    Err(unsafe { Id::retain(error).unwrap() })
+                }
+            };
+            if let Err(ret) = add_result {
                 error!(
                     "Error adding output for display {} (ID {}): {:?}",
                     sender_idx, target_id, ret
