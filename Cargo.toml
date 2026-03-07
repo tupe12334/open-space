@@ -112,6 +112,7 @@ wildcard_enum_match_arm = "deny"
 semicolon_inside_block = "deny"
 unnecessary_safety_comment = "deny"
 unnecessary_safety_doc = "deny"
+partial_pub_fields = "deny"
 
 # Intentionally allowed pedantic/nursery lints with justification:
 # This crate heavily uses Bevy and ObjC interop which requires many unsafe casts
