@@ -47,6 +47,7 @@ resolver = "2"
 [workspace.lints.rust]
 # Compiler lints promoted to deny
 trivial_numeric_casts = "deny"
+unused_import_braces = "deny"
 
 [workspace.lints.clippy]
 # Pedantic: catches subtle bugs and enforces idiomatic Rust
