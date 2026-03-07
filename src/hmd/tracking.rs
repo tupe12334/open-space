@@ -100,7 +100,7 @@ pub(super) fn update_camera_orientation(
         EulerRot::YXZ,
         dcm.yaw,
         -dcm.roll,
-        -dcm.pitch,
+        dcm.pitch,
     ));
 
     for mut transform in &mut query {
