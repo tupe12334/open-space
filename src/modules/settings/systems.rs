@@ -47,7 +47,7 @@ pub(super) fn center_stage(imu_store: Option<Res<ImuStore>>) {
     }
 
     let Some(imu_store) = imu_store else {
-        warn!("No IMU store available — cannot center stage");
+        warn!("No IMU store available \u{2014} cannot center stage");
         return;
     };
 

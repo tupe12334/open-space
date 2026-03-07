@@ -154,6 +154,7 @@ as_pointer_underscore = "deny"
 panic_in_result_fn = "deny"
 print_stdout = "deny"
 mutex_integer = "deny"
+non_ascii_literal = "deny"
 
 # Intentionally allowed pedantic/nursery lints with justification:
 # This crate heavily uses Bevy and ObjC interop which requires many unsafe casts

@@ -53,7 +53,7 @@ pub(super) fn debug_transforms(
     for (entity, cam_tf, camera, projection) in &camera_query {
         let (pitch, yaw, roll) = cam_tf.rotation.to_euler(EulerRot::XYZ);
         info!(
-            "[DEBUG] Camera {:?} pos=({:.3}, {:.3}, {:.3}) pitch={:.3}° yaw={:.3}° roll={:.3}°",
+            "[DEBUG] Camera {:?} pos=({:.3}, {:.3}, {:.3}) pitch={:.3}\u{b0} yaw={:.3}\u{b0} roll={:.3}\u{b0}",
             entity,
             cam_tf.translation.x,
             cam_tf.translation.y,
@@ -68,7 +68,7 @@ pub(super) fn debug_transforms(
         );
         if let Projection::Perspective(persp) = projection {
             info!(
-                "[DEBUG]   fov={:.2}° near={} far={}",
+                "[DEBUG]   fov={:.2}\u{b0} near={} far={}",
                 persp.fov.to_degrees(),
                 persp.near,
                 persp.far,
