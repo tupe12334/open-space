@@ -80,6 +80,8 @@ keyword_idents_2018 = "deny"
 missing_unsafe_on_extern = "deny"
 deprecated_safe_2024 = "deny"
 unsafe_attr_outside_unsafe = "deny"
+deref_into_dyn_supertrait = "deny"
+impl_trait_overcaptures = "deny"
 
 [workspace.lints.clippy]
 # Pedantic: catches subtle bugs and enforces idiomatic Rust
