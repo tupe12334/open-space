@@ -36,9 +36,9 @@ pub(crate) fn auto_correct_drift(state: Res<ImuStore>, time: Res<Time>) {
     let alpha = (DRIFT_CORRECTION_RATE * time.delta_secs()).min(1.0);
 
     let mut lock = state.calibration.lock().unwrap();
-    if let Some(cal) = lock.as_mut() {
-        cal.yaw += rel_yaw * alpha;
-        cal.pitch += rel_pitch * alpha;
-        cal.roll += rel_roll * alpha;
+    if let Some(cal_mut) = lock.as_mut() {
+        cal_mut.yaw += rel_yaw * alpha;
+        cal_mut.pitch += rel_pitch * alpha;
+        cal_mut.roll += rel_roll * alpha;
     }
 }

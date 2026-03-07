@@ -135,10 +135,10 @@ pub(super) fn create_virtual_displays_system(
             let mode: *const AnyObject =
                 msg_send![mode, initWithWidth: width, height: height, refreshRate: refresh_rate];
 
-            let settings = alloc_init(settings_cls);
+            let display_settings = alloc_init(settings_cls);
             let modes: *const AnyObject = msg_send![nsarray_cls, arrayWithObject: mode];
-            let _: () = msg_send![settings, setModes: modes];
-            let _: () = msg_send![settings, setHiDPI: 0_u32];
+            let _: () = msg_send![display_settings, setModes: modes];
+            let _: () = msg_send![display_settings, setHiDPI: 0_u32];
 
             let display: *const AnyObject = msg_send![display_cls, alloc];
             let display: *const AnyObject = msg_send![display, initWithDescriptor: descriptor];
@@ -149,19 +149,19 @@ pub(super) fn create_virtual_displays_system(
                     display_name
                 );
                 ffi::objc_release(descriptor as *mut ffi::objc_object);
-                ffi::objc_release(settings as *mut ffi::objc_object);
+                ffi::objc_release(display_settings as *mut ffi::objc_object);
                 continue;
             }
 
             let display_id: u32 = msg_send![display, displayID];
-            let result: bool = msg_send![display, applySettings: settings];
+            let result: bool = msg_send![display, applySettings: display_settings];
             info!(
                 "Virtual display '{}' created: ID={}, applySettings={}",
                 display_name, display_id, result
             );
 
             ffi::objc_release(descriptor as *mut ffi::objc_object);
-            ffi::objc_release(settings as *mut ffi::objc_object);
+            ffi::objc_release(display_settings as *mut ffi::objc_object);
 
             if !result {
                 warn!(
