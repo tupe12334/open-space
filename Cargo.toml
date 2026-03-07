@@ -91,6 +91,7 @@ edition_2024_expr_fragment_specifier = "deny"
 rust_2021_incompatible_closure_captures = "deny"
 rust_2021_incompatible_or_patterns = "deny"
 rust_2021_prefixes_incompatible_syntax = "deny"
+linker_messages = "deny"
 
 [workspace.lints.clippy]
 # Pedantic: catches subtle bugs and enforces idiomatic Rust
