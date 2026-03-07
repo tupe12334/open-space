@@ -81,7 +81,7 @@ string_add = "deny"
 suspicious_xor_used_as_pow = "deny"
 tests_outside_test_module = "deny"
 try_err = "deny"
-unnecessary_self_imports = "warn"
+unnecessary_self_imports = "deny"
 unneeded_field_pattern = "warn"
 verbose_file_reads = "warn"
 
