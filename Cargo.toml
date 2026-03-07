@@ -10,7 +10,7 @@ repository = "https://github.com/tupe12334/open-space"
 bevy = "0.15.3"
 
 winit = "0.30.5"
-tokio = { version = "1.41.0", features = ["full"] }
+tokio = { version = "1.50.0", features = ["full"] }
 core-graphics2 = { version = "0.5.2", default-features = false, features = [
   "display",
   "objc",
