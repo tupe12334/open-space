@@ -149,6 +149,7 @@ redundant_test_prefix = "deny"
 doc_include_without_cfg = "deny"
 default_union_representation = "deny"
 pointer_format = "deny"
+precedence_bits = "deny"
 
 # Intentionally allowed pedantic/nursery lints with justification:
 # This crate heavily uses Bevy and ObjC interop which requires many unsafe casts
