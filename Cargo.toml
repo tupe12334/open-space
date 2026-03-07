@@ -84,6 +84,7 @@ try_err = "deny"
 unnecessary_self_imports = "deny"
 unneeded_field_pattern = "deny"
 verbose_file_reads = "deny"
+todo = "deny"
 
 # Intentionally allowed pedantic/nursery lints with justification:
 # This crate heavily uses Bevy and ObjC interop which requires many unsafe casts
