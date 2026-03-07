@@ -22,7 +22,7 @@ use objc2::{
     runtime::{AnyObject, ProtocolObject},
     ClassType, DeclaredClass,
 };
-use objc2_foundation::{NSArray, NSError, NSObject, NSObjectProtocol};
+use objc2_foundation::{NSError, NSObject, NSObjectProtocol};
 use screen_capture_kit::{
     shareable_content::SCShareableContent,
     stream::{
@@ -32,6 +32,7 @@ use screen_capture_kit::{
 };
 use tokio::sync::mpsc::{self, Receiver, Sender};
 
+use crate::modules::grid_layout::DISPLAY_HALF_HEIGHT;
 use crate::modules::settings::AppSettings;
 use crate::modules::stage::ScreenMarker;
 
@@ -184,10 +185,7 @@ pub(super) fn spawn_btop_panel(
     let aspect = height as f32 / width as f32;
     let half_height = half_width * aspect;
 
-    // Estimate the half-height of regular screens (16:10 at half_width=2.5)
-    let screen_half_height_estimate = 1.5_f32;
-    let gap = 0.3_f32;
-    let y_pos = min_y - screen_half_height_estimate - gap - half_height;
+    let y_pos = min_y - DISPLAY_HALF_HEIGHT - half_height;
 
     info!(
         "Spawning btop panel at (0, {}, -{}), size={}x{}",
@@ -295,18 +293,9 @@ pub(super) fn setup_btop_capture(frame_channel: Res<BtopFrameChannel>) {
             }
         };
 
-        let displays = shareable_content.displays();
-        if displays.is_empty() {
-            error!("No displays found for btop capture");
-            return;
-        }
-        let display = &displays[0];
-
-        let btop_windows = NSArray::from_slice(&[btop_window]);
-        let filter = SCContentFilter::init_with_display_include_windows(
+        let filter = SCContentFilter::init_with_desktop_independent_window(
             SCContentFilter::alloc(),
-            display,
-            &btop_windows,
+            btop_window,
         );
 
         let configuration = SCStreamConfiguration::new();

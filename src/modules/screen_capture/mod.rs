@@ -32,6 +32,7 @@ use screen_capture_kit::{
 };
 use tokio::sync::mpsc::{self, Receiver, Sender};
 
+use crate::modules::grid_layout::center_main_display;
 use crate::modules::stage::{get_active_displays, AssetHandles};
 use crate::modules::virtual_display::VirtualDisplays;
 use crate::ScaleFactor;
@@ -210,17 +211,7 @@ pub(super) fn setup_screen_capture(
     }
 
     // Reorder so the main Mac display is at the center of the grid
-    if display_specs.len() > 1 {
-        if let Some(main_idx) = display_specs.iter().position(|(id, _, _)| *id == main_id) {
-            let cols = 3_usize;
-            let n = display_specs.len();
-            let total_rows = n.div_ceil(cols);
-            let center_col = cols / 2;
-            let center_row = total_rows / 2;
-            let center_idx = (center_row * cols + center_col).min(n - 1);
-            display_specs.swap(main_idx, center_idx);
-        }
-    }
+    center_main_display(&mut display_specs, main_id, |&(id, _, _)| id);
 
     #[expect(
         clippy::infinite_loop,

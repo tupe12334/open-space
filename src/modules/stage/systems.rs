@@ -6,6 +6,9 @@ use bevy::{
 use core_graphics2::display::CGDisplay;
 use rand::Rng as _;
 
+use crate::modules::grid_layout::{
+    center_main_display, DISPLAY_ASPECT, DISPLAY_HALF_WIDTH, GRID_COLS,
+};
 use crate::modules::settings::AppSettings;
 use crate::modules::virtual_display::VirtualDisplays;
 use crate::ScaleFactor;
@@ -81,17 +84,7 @@ pub(super) fn spawn_screen(
     }
 
     // Reorder so the main Mac display is at the center of the grid
-    if screen_specs.len() > 1 {
-        if let Some(main_idx) = screen_specs.iter().position(|(id, _, _)| *id == main_id) {
-            let cols = 3_usize;
-            let n = screen_specs.len();
-            let total_rows = n.div_ceil(cols);
-            let center_col = cols / 2;
-            let center_row = total_rows / 2;
-            let center_idx = (center_row * cols + center_col).min(n - 1);
-            screen_specs.swap(main_idx, center_idx);
-        }
-    }
+    center_main_display(&mut screen_specs, main_id, |&(id, _, _)| id);
 
     info!("Spawning {} screen(s)", screen_specs.len());
     for (id, w, h) in &screen_specs {
@@ -135,15 +128,14 @@ pub(super) fn spawn_screen(
             ..default()
         });
 
-        let half_width = 2.5;
-        let aspect = height as f32 / width as f32;
-        let half_height = half_width * aspect;
+        let half_width = DISPLAY_HALF_WIDTH;
+        let half_height = half_width * DISPLAY_ASPECT;
         let full_width = half_width * 2.0;
         let full_height = half_height * 2.0;
 
-        // Layout: 2 rows of 3, centered around origin
-        let cols = 3;
-        let gap = 0.3;
+        // Layout: seamless grid, no gaps so displays merge into one
+        let cols = GRID_COLS;
+        let gap = 0.0;
         let col = i % cols;
         let row = i / cols;
 
