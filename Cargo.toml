@@ -21,7 +21,7 @@ core-media = { version = "0.7.1", default-features = false, features = [
 ] }
 core-video = { version = "0.5.2", features = ["objc"] }
 objc2 = { version = "0.5.2", features = ["relax-sign-encoding"] }
-objc2-foundation = { version = "0.2.2", features = [
+objc2-foundation = { version = "0.3.2", features = [
   "NSArray",
   "NSDictionary",
   "NSError",
