@@ -33,7 +33,7 @@ core-foundation = { version = "0.10.1", default-features = false }
 rand = "0.8.5"
 libc = "0.2.161"
 screen-capture-kit = "0.6.1"
-portable-pty = "0.8"
+portable-pty = "0.9"
 vt100 = "0.15"
 fontdue = "0.9"
 ar-drivers = "0.4.3"
