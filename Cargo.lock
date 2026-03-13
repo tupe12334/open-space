@@ -4011,7 +4011,7 @@ dependencies = [
  "dispatch2 0.3.1",
  "fontdue",
  "libc",
- "objc2 0.5.2",
+ "objc2 0.6.4",
  "objc2-foundation",
  "portable-pty",
  "rand 0.8.5",
