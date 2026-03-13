@@ -31,7 +31,7 @@ objc2-foundation = { version = "0.2.2", features = [
 dispatch2 = "0.3.1"
 core-foundation = { version = "0.10.1", default-features = false }
 rand = "0.8.5"
-libc = "0.2.161"
+libc = "0.2.183"
 screen-capture-kit = "0.6.1"
 portable-pty = "0.8"
 vt100 = "0.15"
