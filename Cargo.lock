@@ -2260,9 +2260,9 @@ checksum = "d7a1e2f27636f116493b8b860f5546edb47c8d8f8ea73e1d2a20be88e28d1fea"
 
 [[package]]
 name = "dcmimu"
-version = "0.2.5"
+version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cfc4a66ef74fe432279e31bd31233c9528e15bde5d8cd655f2c8de34ef6df78f"
+checksum = "547356660b846720d1218f5f3215067e4889e1a14825a48e8116e51e5126da2f"
 dependencies = [
  "libm",
 ]
