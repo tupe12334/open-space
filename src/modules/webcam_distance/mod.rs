@@ -6,7 +6,7 @@ mod types;
 pub(crate) use permission::ensure_camera_permission;
 pub(crate) use plugin::WebcamDistancePlugin;
 
-use std::ffi::c_void;
+use core::ffi::c_void;
 use std::sync::{Arc, Mutex};
 
 use bevy::prelude::*;
@@ -109,7 +109,7 @@ pub(super) fn start_webcam_capture(store: Res<DistanceStore>) {
             // Create AVCaptureDeviceInput
             let input_cls =
                 AnyClass::get("AVCaptureDeviceInput").expect("AVCaptureDeviceInput not found");
-            let mut error: *mut NSError = std::ptr::null_mut();
+            let mut error: *mut NSError = core::ptr::null_mut();
             let input: *mut AnyObject =
                 msg_send![input_cls, deviceInputWithDevice: device error: &mut error];
             if input.is_null() {
@@ -192,7 +192,7 @@ pub(super) fn start_webcam_capture(store: Res<DistanceStore>) {
             )]
             let _session = session;
             loop {
-                std::thread::sleep(std::time::Duration::from_secs(1));
+                std::thread::sleep(core::time::Duration::from_secs(1));
             }
         }
     });

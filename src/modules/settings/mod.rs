@@ -7,7 +7,7 @@ pub(crate) use persistence::load_settings;
 pub(crate) use plugin::SettingsPlugin;
 
 use bevy::prelude::*;
-use std::sync::atomic::{AtomicBool, AtomicI32};
+use core::sync::atomic::{AtomicBool, AtomicI32};
 
 const SETTINGS_FILE: &str = "settings.json";
 const DEFAULT_STAGE_DISTANCE: f32 = 6.0;

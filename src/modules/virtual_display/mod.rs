@@ -13,9 +13,9 @@ use crate::modules::settings::AppSettings;
 
 unsafe extern "C" {
     fn dispatch_queue_create(
-        label: *const std::ffi::c_char,
-        attr: *const std::ffi::c_void,
-    ) -> *const std::ffi::c_void;
+        label: *const core::ffi::c_char,
+        attr: *const core::ffi::c_void,
+    ) -> *const core::ffi::c_void;
 }
 
 /// Wraps a `CGVirtualDisplay` pointer with Send+Sync.
@@ -127,7 +127,7 @@ pub(super) fn create_virtual_displays_system(
             let _: () = msg_send![descriptor, setSizeInMillimeters: size];
 
             let label = std::ffi::CString::new(format!("com.spatial_display.virtual.{i}")).unwrap();
-            let queue = dispatch_queue_create(label.as_ptr(), std::ptr::null());
+            let queue = dispatch_queue_create(label.as_ptr(), core::ptr::null());
             let queue_obj = queue.cast::<AnyObject>();
             let _: () = msg_send![descriptor, setQueue: queue_obj];
 

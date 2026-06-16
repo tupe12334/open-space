@@ -125,7 +125,7 @@ pub(super) fn setup_btop_capture(frame_channel: Res<BtopFrameChannel>) {
 
         info!("btop render loop starting...");
         let mut glyph_cache = HashMap::new();
-        let frame_interval = std::time::Duration::from_millis(33);
+        let frame_interval = core::time::Duration::from_millis(33);
 
         loop {
             std::thread::sleep(frame_interval);

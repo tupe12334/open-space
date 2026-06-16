@@ -1,4 +1,4 @@
-use std::ffi::c_void;
+use core::ffi::c_void;
 use std::sync::{Arc, Mutex};
 
 use objc2::encode::{Encode, Encoding, RefEncode};
@@ -99,7 +99,7 @@ pub(super) fn detect_face_distance(
         };
 
         // Perform the request
-        let mut error: *mut NSError = std::ptr::null_mut();
+        let mut error: *mut NSError = core::ptr::null_mut();
         let success: Bool = msg_send![handler, performRequests: &*requests error: &mut error];
 
         if !success.as_bool() {
