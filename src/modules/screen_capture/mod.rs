@@ -4,7 +4,7 @@ mod plugin;
 pub(crate) use permission::ensure_screen_capture_permission;
 pub(crate) use plugin::ScreenCapturePlugin;
 
-use std::sync::atomic::{AtomicBool, Ordering};
+use core::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
 use bevy::prelude::*;
@@ -86,7 +86,7 @@ declare_class!(
                     let bytes_per_row = pixel_buffer.get_bytes_per_row();
                     let buffer_size = height * bytes_per_row;
                     let base_address = unsafe { pixel_buffer.get_base_address() };
-                    let pixels = std::slice::from_raw_parts(
+                    let pixels = core::slice::from_raw_parts(
                         base_address as *const u8,
                         buffer_size
                     );
@@ -228,7 +228,7 @@ fn create_streams(
         );
         let output: &ProtocolObject<dyn SCStreamOutput> = ProtocolObject::from_ref(&*delegate);
         let added: bool = {
-            let mut error: *mut NSError = std::ptr::null_mut();
+            let mut error: *mut NSError = core::ptr::null_mut();
             let raw_queue = queue.as_raw().as_ptr().cast::<AnyObject>();
             let result: bool = unsafe {
                 objc2::msg_send![
@@ -314,7 +314,7 @@ pub(super) fn setup_screen_capture(
 
     std::thread::spawn(move || -> ! {
         info!("Waiting 5 seconds before starting capture...");
-        std::thread::sleep(std::time::Duration::from_secs(5));
+        std::thread::sleep(core::time::Duration::from_secs(5));
 
         loop {
             info!("(Re)initializing screen capture streams...");
@@ -322,16 +322,16 @@ pub(super) fn setup_screen_capture(
                 create_streams(&display_specs, &senders)
             else {
                 warn!("Failed to create streams, retrying in 5 seconds...");
-                std::thread::sleep(std::time::Duration::from_secs(5));
+                std::thread::sleep(core::time::Duration::from_secs(5));
                 continue;
             };
 
             // Monitor for stream errors and restart when detected
             loop {
-                std::thread::sleep(std::time::Duration::from_secs(1));
+                std::thread::sleep(core::time::Duration::from_secs(1));
                 if error_flags.iter().any(|f| f.load(Ordering::SeqCst)) {
                     warn!("Stream error detected, restarting capture in 2 seconds...");
-                    std::thread::sleep(std::time::Duration::from_secs(2));
+                    std::thread::sleep(core::time::Duration::from_secs(2));
                     break;
                 }
             }

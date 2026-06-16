@@ -57,9 +57,9 @@ pub(crate) fn grid_position_name(row: usize, col: usize, total_rows: usize) -> S
     let center_row = total_rows / 2;
 
     let row_name = match row.cmp(&center_row) {
-        std::cmp::Ordering::Less => "Top",
-        std::cmp::Ordering::Greater => "Bottom",
-        std::cmp::Ordering::Equal => return col_name.to_owned(),
+        core::cmp::Ordering::Less => "Top",
+        core::cmp::Ordering::Greater => "Bottom",
+        core::cmp::Ordering::Equal => return col_name.to_owned(),
     };
 
     let center_col = GRID_COLS / 2;

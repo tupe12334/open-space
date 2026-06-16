@@ -1,9 +1,9 @@
 use bevy::prelude::*;
+use core::sync::atomic::Ordering;
 use objc2::msg_send;
 use objc2::runtime::{AnyClass, AnyObject};
 use objc2::{declare_class, msg_send_id, mutability, sel, ClassType, DeclaredClass};
 use objc2_foundation::{NSObject, NSString};
-use std::sync::atomic::Ordering;
 
 use super::{CENTER_STAGE, DISTANCE_STEPS, SCREEN_STEPS};
 
@@ -91,7 +91,7 @@ pub(super) fn setup_menu_bar(mut commands: Commands, _: NonSend<MainThreadMarker
 }
 
 unsafe fn add_settings_submenu(main_menu: *const AnyObject, handler: &MenuHandler) {
-    let handler_ptr: *const MenuHandler = std::ptr::from_ref(handler);
+    let handler_ptr: *const MenuHandler = core::ptr::from_ref(handler);
 
     // Create "Settings" submenu
     let menu_title = NSString::from_str("Settings");

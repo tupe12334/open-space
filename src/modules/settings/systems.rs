@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 use bevy::window::{Monitor, PrimaryMonitor, PrimaryWindow, WindowMode};
-use std::sync::atomic::Ordering;
+use core::sync::atomic::Ordering;
 
 use super::{
     AppSettings, CENTER_STAGE, DISTANCE_STEP, DISTANCE_STEPS, MAX_DISTANCE, MAX_NUM_SCREENS,
