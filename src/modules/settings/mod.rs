@@ -7,6 +7,7 @@ pub(crate) use persistence::load_settings;
 pub(crate) use plugin::SettingsPlugin;
 
 use bevy::prelude::*;
+use serde::{Deserialize, Serialize};
 use std::sync::atomic::{AtomicBool, AtomicI32};
 
 const SETTINGS_FILE: &str = "settings.json";
@@ -22,10 +23,12 @@ static DISTANCE_STEPS: AtomicI32 = AtomicI32::new(0);
 static SCREEN_STEPS: AtomicI32 = AtomicI32::new(0);
 pub(crate) static CENTER_STAGE: AtomicBool = AtomicBool::new(false);
 
-#[derive(Resource, Clone)]
+#[derive(Resource, Clone, Serialize, Deserialize)]
+#[serde(default)]
 pub(crate) struct AppSettings {
     pub(crate) stage_distance: f32,
     pub(crate) num_screens: u32,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) glasses_monitor_name: Option<String>,
 }
 
