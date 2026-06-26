@@ -186,6 +186,11 @@ precedence_bits = "deny"
 as_pointer_underscore = "deny"
 panic_in_result_fn = "deny"
 print_stdout = "deny"
+# `eprintln!`/`eprint!` write directly to stderr, bypassing the structured
+# logging pipeline (Bevy's tracing subscriber). Set to `warn` to surface
+# existing call sites for incremental migration to `bevy::log::error!` /
+# `bevy::log::warn!` without breaking the build.
+print_stderr = "warn"
 mutex_integer = "deny"
 non_ascii_literal = "deny"
 else_if_without_else = "deny"
