@@ -4,48 +4,20 @@ use bevy::{
     render::render_resource::{Extent3d, TextureDimension, TextureFormat, TextureUsages},
 };
 use core_graphics2::display::CGDisplay;
-use rand::Rng;
+use rand::Rng as _;
 
-use crate::settings::AppSettings;
-use crate::virtual_display::VirtualDisplays;
+use crate::modules::grid_layout::{
+    center_main_display, DISPLAY_ASPECT, DISPLAY_HALF_WIDTH, DISPLAY_HEIGHT, DISPLAY_WIDTH,
+    GRID_COLS,
+};
+use crate::modules::settings::AppSettings;
+use crate::modules::virtual_display::VirtualDisplays;
 use crate::ScaleFactor;
 
-#[derive(Component)]
-pub struct ScreenMarker;
+use super::components::{AssetHandles, ScreenMarker};
+use super::display::get_active_displays;
 
-extern "C" {
-    fn CGGetActiveDisplayList(max: u32, displays: *mut u32, count: *mut u32) -> i32;
-}
-
-/// Returns (display_id, CGDisplay) pairs for active displays, up to `max`.
-pub fn get_active_displays(max: usize) -> Vec<(u32, CGDisplay)> {
-    let mut ids = vec![0u32; max];
-    let mut count = 0u32;
-    let err = unsafe { CGGetActiveDisplayList(max as u32, ids.as_mut_ptr(), &mut count) };
-    if err != 0 {
-        return vec![];
-    }
-    ids.truncate(count as usize);
-    ids.into_iter().map(|id| (id, CGDisplay::new(id))).collect()
-}
-
-#[derive(Resource)]
-pub struct AssetHandles {
-    pub screens: Vec<Handle<Image>>,
-    /// CGDirectDisplayID for each screen, in the same order as `screens`.
-    #[allow(dead_code)]
-    pub display_ids: Vec<u32>,
-}
-
-pub struct StagePlugin;
-
-impl Plugin for StagePlugin {
-    fn build(&self, app: &mut App) {
-        app.add_systems(Startup, (spawn_stage, spawn_screen));
-    }
-}
-
-fn spawn_stage(
+pub(super) fn spawn_stage(
     mut commands: Commands,
     mut materials: ResMut<Assets<StandardMaterial>>,
     _images: ResMut<Assets<Image>>,
@@ -62,51 +34,9 @@ fn spawn_stage(
         })),
         Transform::from_xyz(0.0, -4.0, 0.0),
     ));
-
-    // let sphere_texture = Image::new(
-    //     Extent3d {
-    //         width: 256,
-    //         height: 256,
-    //         depth_or_array_layers: 1,
-    //     },
-    //     TextureDimension::D2,
-    //     (0..256 * 256)
-    //         .flat_map(|i| {
-    //             let y = (i / 256) as f32 / 256.0;
-    //             let r = 255;
-    //             let g = ((1.0 - y) * 255.0) as u8;
-    //             let b = 0;
-    //             vec![r, g, b, 255]
-    //         })
-    //         .collect(),
-    //     TextureFormat::Rgba8UnormSrgb,
-    //     RenderAssetUsages::RENDER_WORLD,
-    // );
-
-    // // info!(
-    // //     "All image handles BEFORE SPHERE INSERT: {:?}",
-    // //     images.ids().collect::<Vec<_>>()
-    // // );
-    // let sphere_texture_handle = images.add(sphere_texture);
-    // // info!("SPHERE texture handle: {:?}", sphere_texture_handle);
-    // // info!(
-    // //     "All image handles AFTER SPHERE INSERT: {:?}",
-    // //     images.ids().collect::<Vec<_>>()
-    // // );
-    // let sphere_material = materials.add(StandardMaterial {
-    //     base_color_texture: Some(sphere_texture_handle),
-    //     ..default()
-    // });
-
-    // // Test spheres in different positions
-    // commands.spawn((
-    //     Mesh3d(meshes.add(Sphere::default().mesh())),
-    //     MeshMaterial3d(sphere_material),
-    //     Transform::from_xyz(0.0, 1.0, -8.0),
-    // ));
 }
 
-fn spawn_screen(
+pub(super) fn spawn_screen(
     mut commands: Commands,
     mut images: ResMut<Assets<Image>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
@@ -120,18 +50,10 @@ fn spawn_screen(
 
     // Collect (display_id, pixel_width, pixel_height) from virtual or physical displays
     let vd = virtual_displays.displays();
-    let screen_specs: Vec<(u32, u32, u32)> = if !vd.is_empty() {
-        vd.iter()
-            .map(|d| {
-                let w = (d.width as f64 * scale_factor.value).round() as u32;
-                let h = (d.height as f64 * scale_factor.value).round() as u32;
-                (d.display_id, w, h)
-            })
-            .collect()
-    } else {
+    let mut screen_specs: Vec<(u32, u32, u32)> = if vd.is_empty() {
         let physical = get_active_displays(2);
         let physical = if physical.is_empty() {
-            vec![(0u32, CGDisplay::main())]
+            vec![(0_u32, CGDisplay::main())]
         } else {
             physical
         };
@@ -143,7 +65,25 @@ fn spawn_screen(
                 (*id, w, h)
             })
             .collect()
+    } else {
+        vd.iter()
+            .map(|d| {
+                let w = (d.width as f64 * scale_factor.value).round() as u32;
+                let h = (d.height as f64 * scale_factor.value).round() as u32;
+                (d.display_id, w, h)
+            })
+            .collect()
     };
+
+    // Always include the main Mac display at the standard resolution
+    let main_display = CGDisplay::main();
+    let main_id = main_display.id;
+    if !screen_specs.iter().any(|(id, _, _)| *id == main_id) {
+        screen_specs.push((main_id, DISPLAY_WIDTH, DISPLAY_HEIGHT));
+    }
+
+    // Reorder so the main Mac display is at the center of the grid
+    center_main_display(&mut screen_specs, main_id, |&(id, _, _)| id);
 
     info!("Spawning {} screen(s)", screen_specs.len());
     for (id, w, h) in &screen_specs {
@@ -173,9 +113,8 @@ fn spawn_screen(
             RenderAssetUsages::default(),
         );
 
-        screen_texture.texture_descriptor.usage = TextureUsages::COPY_DST
-            | TextureUsages::TEXTURE_BINDING
-            | TextureUsages::STORAGE_BINDING;
+        screen_texture.texture_descriptor.usage =
+            TextureUsages::COPY_DST | TextureUsages::TEXTURE_BINDING;
 
         let texture_handle = images.add(screen_texture);
         screen_handles.push(texture_handle.clone());
@@ -188,15 +127,14 @@ fn spawn_screen(
             ..default()
         });
 
-        let half_width = 2.5;
-        let aspect = height as f32 / width as f32;
-        let half_height = half_width * aspect;
+        let half_width = DISPLAY_HALF_WIDTH;
+        let half_height = half_width * DISPLAY_ASPECT;
         let full_width = half_width * 2.0;
         let full_height = half_height * 2.0;
 
-        // Layout: 2 rows of 3, centered around origin
-        let cols = 3;
-        let gap = 0.3;
+        // Layout: seamless grid, no gaps so displays merge into one
+        let cols = GRID_COLS;
+        let gap = 0.0;
         let col = i % cols;
         let row = i / cols;
 

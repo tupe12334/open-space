@@ -1,36 +1,49 @@
-mod camera;
-mod debug;
-mod hmd;
-mod screen_capture;
-mod settings;
-mod stage;
-mod virtual_display;
+//! Spatial display application using virtual displays and AR glasses.
+
+#![deny(warnings)]
+
+// Bevy and ObjC interop require significant unsafe code throughout this crate.
+#![allow(
+    clippy::undocumented_unsafe_blocks,
+    reason = "ObjC interop requires pervasive unsafe throughout this crate"
+)]
+
+mod modules;
 
 use bevy::{
     prelude::*,
     window::{PresentMode, WindowMode},
 };
 
-use camera::CameraPlugin;
-use debug::DebugPlugin;
-use hmd::HmdPlugin;
-use screen_capture::ScreenCapturePlugin;
-use settings::SettingsPlugin;
-use stage::StagePlugin;
-use virtual_display::VirtualDisplayPlugin;
+use modules::btop::BtopPlugin;
+use modules::camera::CameraPlugin;
+use modules::debug::DebugPlugin;
+use modules::hmd::HmdPlugin;
+use modules::screen_capture::{ensure_screen_capture_permission, ScreenCapturePlugin};
+use modules::settings::SettingsPlugin;
+use modules::stage::StagePlugin;
+use modules::virtual_display::VirtualDisplayPlugin;
+use modules::webcam_distance::{ensure_camera_permission, WebcamDistancePlugin};
 
-#[derive(Resource)]
+/// The scale factor for display rendering.
+#[derive(Debug, Resource)]
+#[non_exhaustive]
 pub struct ScaleFactor {
+    /// The numeric scale factor value.
     pub value: f64,
 }
 
 fn main() {
+    ensure_screen_capture_permission();
+    ensure_camera_permission();
+    modules::display_modes::wait_for_physical_display_modes();
+
+    // Load settings once, before anything else needs them.
+    let settings = modules::settings::load_settings();
+
     App::new()
-        .insert_resource(AmbientLight {
-            color: Color::default(),
-            brightness: 100.0,
-        })
         .insert_resource(ScaleFactor { value: 1.0 })
+        .insert_resource(settings)
         .add_plugins(DefaultPlugins.set(WindowPlugin {
             primary_window: Some(Window {
                 // https://docs.rs/bevy_window/latest/bevy_window/enum.PresentMode.html
@@ -41,10 +54,11 @@ fn main() {
                 focused: false,
                 visible: true,
                 // window_level: WindowLevel::AlwaysOnTop,
-                mode: WindowMode::Windowed,
-                // mode: WindowMode::Fullscreen(MonitorSelection::Index(1)),
-                // position: WindowPosition::Centered(MonitorSelection::Index(1)), // 0 is primary, 1 is secondary
-                // mode: WindowMode::Windowed,
+                // Start fullscreen on the primary monitor so the window never lands
+                // on a virtual display. select_glasses_fullscreen will move it to
+                // the Air display once detected.
+                mode: WindowMode::BorderlessFullscreen(MonitorSelection::Primary),
+                position: WindowPosition::At(IVec2::ZERO),
                 ..default()
             }),
             ..default()
@@ -55,6 +69,8 @@ fn main() {
         .add_plugins(StagePlugin)
         .add_plugins(HmdPlugin)
         .add_plugins(ScreenCapturePlugin)
+        .add_plugins(BtopPlugin)
+        .add_plugins(WebcamDistancePlugin)
         .insert_resource(Time::<Fixed>::from_hz(500.0)) // when using Fixed schedule
         .add_plugins(DebugPlugin)
         .run();

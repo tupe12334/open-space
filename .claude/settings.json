@@ -27,7 +27,16 @@
       "Bash(cargo info:*)",
       "WebFetch(domain:docs.rs)",
       "Bash(cargo fmt:*)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(cargo build:*)",
+      "Bash(git config:*)",
+      "Bash(gh issue:*)",
+      "Bash(command:*)",
+      "Bash(cargo clippy:*)",
+      "Bash(cargo test:*)",
+      "Bash(gh repo:*)",
+      "Bash(gh label:*)",
+      "Bash(cargo doc:*)"
     ],
     "deny": ["Bash(gh issue create:*)"]
   },
